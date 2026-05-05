@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contact Us | GrievAI – Government of India</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Serif:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/chatbot.css">
+</head>
+<body>
+  <div id="site-header-placeholder"></div>
+
+  <div class="breadcrumb-bar">
+    <div class="breadcrumb-inner">
+      <a href="index.html">🏠 Home</a>
+      <span class="sep">›</span>
+      <span>Contact</span>
+    </div>
+  </div>
+
+  <div class="page-hero">
+    <div class="page-hero-inner">
+      <h1 data-i18n="page.contact.h1">📞 Contact Us</h1>
+      <p data-i18n="page.contact.desc">Reach out to our helpdesk for assistance with your grievances. We respond within 2 working days.</p>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- Contact Info Cards -->
+    <div class="grid-4" style="margin-bottom:36px;gap:18px;">
+      <div class="contact-info-card">
+        <div class="contact-icon">📞</div>
+        <div>
+          <h4>Helpline (Toll Free)</h4>
+          <p><strong style="font-size:1.1rem;color:var(--navy);">1800-11-7781</strong><br>Mon–Fri, 9AM – 5:30PM</p>
+        </div>
+      </div>
+      <div class="contact-info-card">
+        <div class="contact-icon">📧</div>
+        <div>
+          <h4>Email Support</h4>
+          <p><strong>grievances@gov.in</strong><br>Response in 2 working days</p>
+        </div>
+      </div>
+      <div class="contact-info-card">
+        <div class="contact-icon">📍</div>
+        <div>
+          <h4>Office Address</h4>
+          <p>North Block, New Delhi<br>New Delhi – 110001</p>
+        </div>
+      </div>
+      <div class="contact-info-card">
+        <div class="contact-icon">💬</div>
+        <div>
+          <h4>AI Chatbot</h4>
+          <p>Available 24×7<br>Click the 🤖 button below-right</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="gap:28px;">
+
+      <!-- Contact Form -->
+      <div>
+        <div class="complaint-form-section">
+          <div class="form-section-header">
+            <div class="form-section-icon">✉️</div>
+            <div>
+              <h2 data-i18n="page.contact.h1">Send Us a Message</h2>
+              <p>We'll respond within 2 working days</p>
+            </div>
+          </div>
+          <div class="complaint-form-body">
+            <form id="contactForm" novalidate>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="cName"><span data-i18n="form.name">Full Name</span> <span class="required">*</span></label>
+                  <input type="text" id="cName" name="name" class="form-control" placeholder="Your full name" required>
+                </div>
+                <div class="form-group">
+                  <label for="cMobile"><span data-i18n="form.mobile">Mobile Number</span> <span class="required">*</span></label>
+                  <input type="tel" id="cMobile" name="mobile" class="form-control" placeholder="10-digit mobile" maxlength="10" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="cEmail"><span data-i18n="form.email">Email Address</span> <span class="required">*</span></label>
+                <input type="email" id="cEmail" name="email" class="form-control" placeholder="your@email.com" required>
+              </div>
+              <div class="form-group">
+                <label for="cCategory"><span data-i18n="form.dept">Category</span> <span class="required">*</span></label>
+                <select id="cCategory" name="category" class="form-control" required>
+                  <option value="">-- Select Category --</option>
+                  <option>Complaint Filing Help</option>
+                  <option>Complaint Tracking Issue</option>
+                  <option>Technical Problem</option>
+                  <option>Login / Account Issue</option>
+                  <option>Feedback / Suggestion</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="cComplaintId">Complaint ID (if applicable)</label>
+                <input type="text" id="cComplaintId" name="complaintId" class="form-control" placeholder="GRIEVA/YYYY/XXXXXX" style="text-transform:uppercase;">
+              </div>
+              <div class="form-group">
+                <label for="cMessage"><span data-i18n="bot.input.ph">Message</span> <span class="required">*</span></label>
+                <textarea id="cMessage" name="message" class="form-control" rows="5" placeholder="Describe your query or issue in detail…" required></textarea>
+              </div>
+              <div class="form-group">
+                <label>
+                  <input type="checkbox" required> I agree that the information provided is accurate and may be used to respond to my query.
+                </label>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full" data-i18n="btn.submit">📤 Submit Complaint</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info panels -->
+      <div style="display:flex;flex-direction:column;gap:20px;">
+
+        <!-- Ministry Info -->
+        <div class="content-block">
+          <h3><span class="block-icon">🏛️</span> Ministry Details</h3>
+          <table style="width:100%;font-size:0.85rem;">
+            <tr>
+              <td style="padding:8px 0;color:var(--text-muted);width:140px;">Ministry</td>
+              <td style="padding:8px 0;font-weight:600;color:var(--text-primary);">Ministry of Personnel, Public Grievances &amp; Pensions</td>
+            </tr>
+            <tr style="border-top:1px solid var(--light-gray);">
+              <td style="padding:8px 0;color:var(--text-muted);">Department</td>
+              <td style="padding:8px 0;font-weight:600;">Dept. of Administrative Reforms &amp; PG</td>
+            </tr>
+            <tr style="border-top:1px solid var(--light-gray);">
+              <td style="padding:8px 0;color:var(--text-muted);">Address</td>
+              <td style="padding:8px 0;">North Block, Central Secretariat<br>New Delhi – 110001</td>
+            </tr>
+            <tr style="border-top:1px solid var(--light-gray);">
+              <td style="padding:8px 0;color:var(--text-muted);">Helpline</td>
+              <td style="padding:8px 0;font-weight:700;color:var(--navy);">1800-11-7781 (Toll Free)</td>
+            </tr>
+            <tr style="border-top:1px solid var(--light-gray);">
+              <td style="padding:8px 0;color:var(--text-muted);">Email</td>
+              <td style="padding:8px 0;"><a href="mailto:grievances@gov.in">grievances@gov.in</a></td>
+            </tr>
+            <tr style="border-top:1px solid var(--light-gray);">
+              <td style="padding:8px 0;color:var(--text-muted);">Timing</td>
+              <td style="padding:8px 0;">Mon–Fri | 9:00 AM – 5:30 PM</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Department Helplines -->
+        <div class="content-block">
+          <h3><span class="block-icon">📋</span> Department Helplines</h3>
+          <table style="width:100%;font-size:0.83rem;">
+            <thead>
+              <tr>
+                <th style="text-align:left;padding:8px;background:var(--off-gray,#f5f7fa);color:var(--navy);font-size:0.78rem;">Department</th>
+                <th style="text-align:left;padding:8px;background:var(--off-gray,#f5f7fa);color:var(--navy);font-size:0.78rem;">Helpline</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:8px 0;border-bottom:1px solid var(--light-gray);">🏥 Health</td><td style="padding:8px 0;border-bottom:1px solid var(--light-gray);font-weight:600;">104</td></tr>
+              <tr><td style="padding:8px 0;border-bottom:1px solid var(--light-gray);">🎓 Education</td><td style="padding:8px 0;border-bottom:1px solid var(--light-gray);font-weight:600;">1800-11-8002</td></tr>
+              <tr><td style="padding:8px 0;border-bottom:1px solid var(--light-gray);">🚌 Transport</td><td style="padding:8px 0;border-bottom:1px solid var(--light-gray);font-weight:600;">1800-11-6767</td></tr>
+              <tr><td style="padding:8px 0;border-bottom:1px solid var(--light-gray);">👮 Police</td><td style="padding:8px 0;border-bottom:1px solid var(--light-gray);font-weight:600;">100 / 112</td></tr>
+              <tr><td style="padding:8px 0;">🏙️ Municipal</td><td style="padding:8px 0;font-weight:600;">1533</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Emergency Numbers -->
+        <div style="background:linear-gradient(135deg,#fff3e8,#fff8f2);border:1px solid #ffd0a0;border-radius:var(--radius);padding:20px;">
+          <h4 style="color:var(--saffron);font-family:var(--font-serif);margin-bottom:14px;">🚨 Emergency Numbers</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.85rem;">
+            <div><strong style="color:var(--navy);">Police</strong><br>100</div>
+            <div><strong style="color:var(--navy);">Fire</strong><br>101</div>
+            <div><strong style="color:var(--navy);">Ambulance</strong><br>108</div>
+            <div><strong style="color:var(--navy);">Emergency</strong><br>112</div>
+            <div><strong style="color:var(--navy);">Women Helpline</strong><br>1091</div>
+            <div><strong style="color:var(--navy);">Child Helpline</strong><br>1098</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Map Placeholder -->
+    <div style="margin-top:36px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow-sm);">
+      <div style="background:var(--navy);padding:14px 20px;">
+        <h4 style="color:#fff;font-family:var(--font-serif);">📍 Office Location – New Delhi</h4>
+      </div>
+      <div style="background:#e8edf3;height:280px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+        <div style="font-size:3rem;">🗺️</div>
+        <p style="color:var(--text-muted);font-size:0.88rem;">Ministry of Personnel, Public Grievances &amp; Pensions</p>
+        <p style="color:var(--navy);font-weight:600;">North Block, Central Secretariat, New Delhi – 110001</p>
+        <a href="https://maps.google.com/?q=North+Block+New+Delhi" target="_blank" rel="noopener" class="btn btn-navy btn-sm">Open in Google Maps</a>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="site-footer-placeholder"></div>
+  <script src="js/ai_department.js"></script>
+  <script src="js/camera.js"></script>
+  <script src="js/lang.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/chatbot.js"></script>
+</body>
+</html>
