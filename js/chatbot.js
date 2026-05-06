@@ -176,11 +176,11 @@
       departments:
         '🏛️ <strong>13 Departments Covered:</strong>\n\n💧 Water Supply & Sanitation\n⚡ Electricity Department\n🏥 Health & Family Welfare\n🚌 Transport Authority\n👮 Police Department\n🏙️ Municipal Corporation\n📋 Revenue & Land Records\n🎓 Department of Education\n🛒 Public Distribution (PDS)\n👷 Labour & Employment\n👩‍👧 Social Welfare\n🌾 Agriculture Department\n📡 Telecommunications',
       timeline:
-        '⏱️ <strong>Resolution Timelines:</strong>\n\n🚨 Critical/Emergency → <strong>24–48 hours</strong>\n🔴 High Priority → <strong>7–15 working days</strong>\n🟡 Normal Complaints → <strong>30 working days</strong>\n\n📱 You get SMS updates at every step.\n⬆️ Auto-escalation if no action after 30 days.',
+        '⏱️ <strong>Resolution Timelines:</strong>\n\n🚨 Critical/Emergency → <strong>24–48 hours</strong>\n🔴 High Priority → <strong>1–2 working days</strong>\n🟡 Normal Complaints → <strong>3–4 working days</strong>\n\n📱 You get SMS updates at every step.\n⬆️ Auto-escalation if no action after 4 days.',
       escalate:
-        '⬆️ <strong>How to Escalate:</strong>\n\n1. Auto-escalates after <strong>30 days</strong> of no action\n2. Call Helpline: <strong>1800-11-7781</strong> (Toll Free)\n3. Email: <strong>grievances@gov.in</strong>\n4. Escalate manually from your dashboard\n\nKeep your Complaint ID ready.',
+        '⬆️ <strong>How to Escalate:</strong>\n\n1. Auto-escalates after <strong>4 days</strong> of no action\n2. Call Helpline: <strong>1800-11-7781</strong> (Toll Free)\n3. Email: <strong>grievances@gov.in</strong>\n4. Escalate manually from your dashboard\n\nKeep your Complaint ID ready.',
       help:
-        '📖 <strong>Quick Guide to GrievAI:</strong>\n\n1️⃣ Visit Home → Click <strong>Lodge Complaint</strong>\n2️⃣ Fill the form (no login needed)\n3️⃣ AI detects department automatically\n4️⃣ Capture live photo with GPS\n5️⃣ Get your <strong>Complaint ID</strong> via SMS\n6️⃣ Track anytime at Track page\n7️⃣ Escalate if not resolved in 30 days',
+        '📖 <strong>Quick Guide to GrievAI:</strong>\n\n1️⃣ Visit Home → Click <strong>Lodge Complaint</strong>\n2️⃣ Fill the form (no login needed)\n3️⃣ AI detects department automatically\n4️⃣ Capture live photo with GPS\n5️⃣ Get your <strong>Complaint ID</strong> via SMS\n6️⃣ Track anytime at Track page\n7️⃣ Escalate if not resolved in 4 days',
       login:
         '🔐 <strong>Login Information:</strong>\n\n👤 <strong>Citizen Login</strong> – View your complaint history\n🏛️ <strong>Officer Login</strong> – Manage assigned complaints\n⚙️ <strong>Admin Login</strong> – Full portal management\n\n💡 <strong>Tip:</strong> You can file & track complaints WITHOUT logging in!',
       status_types:
@@ -225,7 +225,7 @@
       departments:
         '🏛️ <strong>13 विभाग शामिल हैं:</strong>\n\n💧 जल आपूर्ति और स्वच्छता\n⚡ बिजली विभाग\n🏥 स्वास्थ्य और परिवार कल्याण\n🚌 परिवहन प्राधिकरण\n👮 पुलिस विभाग\n🏙️ नगर निगम\n📋 राजस्व और भूमि अभिलेख\n🎓 शिक्षा विभाग\n🛒 सार्वजनिक वितरण प्रणाली (PDS)\n👷 श्रम और रोजगार\n👩‍👧 समाज कल्याण\n🌾 कृषि विभाग\n📡 दूरसंचार',
       timeline:
-        '⏱️ <strong>समाधान समयसीमा:</strong>\n\n🚨 आपातकालीन → <strong>24–48 घंटे</strong>\n🔴 उच्च प्राथमिकता → <strong>7–15 कार्य दिवस</strong>\n🟡 सामान्य शिकायतें → <strong>30 कार्य दिवस</strong>\n\n📱 हर कदम पर SMS अपडेट मिलेगा।\n⬆️ 30 दिनों में कार्रवाई न होने पर स्वतः एस्केलेशन।',
+        '⏱️ <strong>समाधान समयसीमा:</strong>\n\n🚨 आपातकालीन → <strong>24–48 घंटे</strong>\n🔴 उच्च प्राथमिकता → <strong>1–2 कार्य दिवस</strong>\n🟡 सामान्य शिकायतें → <strong>3–4 कार्य दिवस</strong>\n\n📱 हर कदम पर SMS अपडेट मिलेगा।\n⬆️ 4 दिनों में कार्रवाई न होने पर स्वतः एस्केलेशन।',
       escalate:
         '⬆️ <strong>एस्केलेशन कैसे करें:</strong>\n\n1. 30 दिनों में कोई कार्रवाई नहीं → स्वतः एस्केलेशन\n2. हेल्पलाइन: <strong>1800-11-7781</strong> (टोल फ्री)\n3. ईमेल: <strong>grievances@gov.in</strong>\n4. डैशबोर्ड से मैन्युअल एस्केलेशन\n\nअपना Complaint ID तैयार रखें।',
       help:

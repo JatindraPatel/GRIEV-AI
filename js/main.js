@@ -319,6 +319,8 @@ function showTrackResult(id) {
   const result = document.getElementById('trackResult');
   if (!result) return;
   const mock = getMockStatus(id);
+  const isResolved = mock.status === 'Resolved';
+  const feedbackHtml = isResolved ? buildFeedbackHTML(id) : '';
   result.innerHTML = `
     <div class="card mt-6">
       <div class="card-header">
@@ -348,6 +350,7 @@ function showTrackResult(id) {
               </div>
             </div>`).join('')}
         </div>
+        ${feedbackHtml}
       </div>
       <div class="card-footer" style="display:flex;gap:10px;flex-wrap:wrap;">
         <a href="status.html" class="btn btn-navy btn-sm">View Full Status</a>
@@ -355,12 +358,14 @@ function showTrackResult(id) {
       </div>
     </div>`;
   result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (isResolved) initFeedbackWidget(id);
 }
 
 function renderStatusResult(id) {
   const area = document.getElementById('statusResultArea');
   if (!area) return;
   const mock = getMockStatus(id);
+  const isResolved = mock.badgeClass === 'success';
   area.style.display = 'block';
   area.innerHTML = `
     <div class="card">
@@ -393,6 +398,7 @@ function renderStatusResult(id) {
               </div>
             </div>`).join('')}
         </div>
+        ${isResolved ? buildFeedbackHTML(id) : ''}
       </div>
       <div class="card-footer" style="display:flex;gap:10px;flex-wrap:wrap;">
         <button onclick="window.print()" class="btn btn-navy btn-sm">🖨 Print Report</button>
@@ -400,6 +406,7 @@ function renderStatusResult(id) {
       </div>
     </div>`;
   area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if (isResolved) initFeedbackWidget(id);
 }
 
 function getMockStatus(id) {
@@ -412,11 +419,13 @@ function getMockStatus(id) {
     { label: 'Pending', cls: 'navy' }
   ];
   const hash = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  const s = statuses[hash % statuses.length];
+  // Force demo IDs to always show Resolved so feedback widget is visible during demo
+  const RESOLVED_DEMOS = ['GRIEVA/2024/783421', 'GRIEVA/2026/465268'];
+  const s = RESOLVED_DEMOS.includes(id.toUpperCase()) ? { label: 'Resolved', cls: 'success' } : statuses[hash % statuses.length];
   const d = new Date();
   d.setDate(d.getDate() - (hash % 30));
   const etaDate = new Date();
-  etaDate.setDate(etaDate.getDate() + 7);
+  etaDate.setDate(etaDate.getDate() + 3);
 
   return {
     status: s.label,
@@ -761,7 +770,7 @@ window.showComplaintSuccess = function(id, apiData) {
   var deptFinal      = (apiData && apiData.department) || hiddenDept || detectedDept;
   var priorityFinal  = (apiData && apiData.priority)   || detectedUrgency;
   var now            = new Date();
-  var eta            = new Date(now.getTime() + 21 * 86400000);
+  var eta            = new Date(now.getTime() + 3 * 86400000);
   var fmtDate        = function(d) { return d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); };
 
   // Geo info
@@ -829,3 +838,148 @@ window.showComplaintSuccess = function(id, apiData) {
 
   result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 };
+
+// ====================================================
+// FIX 1 — FEEDBACK WIDGET BUILDER
+// Shows 5-star rating + comment for Resolved complaints
+// buildFeedbackHTML = alias used in track.html + status.html
+// initFeedbackWidget = no-op (widget rendered inline via innerHTML)
+// ====================================================
+function buildFeedbackHTML(complaintId) {
+  return buildFeedbackWidget(complaintId);
+}
+function initFeedbackWidget(complaintId) {
+  // Widget already embedded in innerHTML — no extra init needed
+}
+function buildFeedbackWidget(complaintId) {
+  var stored = sessionStorage.getItem('feedback_' + complaintId);
+  if (stored) {
+    return '<div class="feedback-widget"><div class="feedback-widget-header">⭐ Your Feedback</div>' +
+           '<div class="feedback-success">✅ Thank you! Your feedback has been submitted.<br><small style="color:#4a5568;font-weight:400;">Rating: ' + stored + ' — This helps improve governance.</small></div></div>';
+  }
+  return '<div class="feedback-widget" id="fw_' + complaintId + '">' +
+    '<div class="feedback-widget-header">' +
+      '<span>⭐</span>' +
+      '<span>Rate Your Experience — Complaint ' + complaintId + '</span>' +
+    '</div>' +
+    '<div class="feedback-widget-body">' +
+      '<p style="font-size:0.8rem;color:#4a5568;margin-bottom:10px;">Your complaint has been <strong style="color:#1a7a3f;">Resolved</strong>. Please rate the resolution quality to help improve governance.</p>' +
+      '<div class="star-row">' +
+        '<button class="star-btn" onclick="setRating(\'' + complaintId + '\',1)" id="star_' + complaintId + '_1" title="Very Poor">★</button>' +
+        '<button class="star-btn" onclick="setRating(\'' + complaintId + '\',2)" id="star_' + complaintId + '_2" title="Poor">★</button>' +
+        '<button class="star-btn" onclick="setRating(\'' + complaintId + '\',3)" id="star_' + complaintId + '_3" title="Average">★</button>' +
+        '<button class="star-btn" onclick="setRating(\'' + complaintId + '\',4)" id="star_' + complaintId + '_4" title="Good">★</button>' +
+        '<button class="star-btn" onclick="setRating(\'' + complaintId + '\',5)" id="star_' + complaintId + '_5" title="Excellent">★</button>' +
+        '<span class="star-label" id="starlabel_' + complaintId + '">Click to rate</span>' +
+      '</div>' +
+      '<textarea class="feedback-textarea" id="fbtxt_' + complaintId + '" placeholder="Optional: Tell us about your experience — what went well, what could be improved…"></textarea>' +
+      '<div class="feedback-submit-row">' +
+        '<button class="feedback-submit-btn" id="fbsubmit_' + complaintId + '" onclick="submitFeedback(\'' + complaintId + '\')" disabled>📤 Submit Feedback</button>' +
+        '<span class="feedback-note">Your rating helps officers get evaluated fairly.</span>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+window._selectedRating = {};
+function setRating(id, val) {
+  window._selectedRating[id] = val;
+  var labels = ['', 'Very Poor 😞', 'Poor 🙁', 'Average 😐', 'Good 😊', 'Excellent 😄'];
+  var lbl = document.getElementById('starlabel_' + id);
+  if (lbl) lbl.textContent = labels[val] || val + ' stars';
+  for (var i = 1; i <= 5; i++) {
+    var s = document.getElementById('star_' + id + '_' + i);
+    if (s) s.classList.toggle('active', i <= val);
+  }
+  var btn = document.getElementById('fbsubmit_' + id);
+  if (btn) btn.disabled = false;
+}
+
+function submitFeedback(id) {
+  var rating   = window._selectedRating[id];
+  var txtEl    = document.getElementById('fbtxt_' + id);
+  var comment  = txtEl ? txtEl.value.trim() : '';
+  var btn      = document.getElementById('fbsubmit_' + id);
+  if (!rating) { showNotification('Please select a star rating first.', 'error'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
+  var labels = ['', 'Very Poor', 'Poor', 'Average', 'Good', 'Excellent'];
+  setTimeout(function() {
+    sessionStorage.setItem('feedback_' + id, labels[rating] + ' (' + rating + '/5)');
+    var fw = document.getElementById('fw_' + id);
+    if (fw) {
+      fw.querySelector('.feedback-widget-body').innerHTML =
+        '<div class="feedback-success">' +
+          '✅ <strong>Thank you for your feedback!</strong><br>' +
+          '<span style="color:#4a5568;font-weight:400;font-size:0.82rem;">Rating: ' + '★'.repeat(rating) + '☆'.repeat(5-rating) + ' — ' + labels[rating] + '</span><br>' +
+          (comment ? '<span style="color:#718096;font-size:0.75rem;margin-top:4px;display:block;">Your comment: "' + comment + '"</span>' : '') +
+          '<span style="color:#718096;font-size:0.72rem;margin-top:6px;display:block;">Your feedback has been recorded and will be used to evaluate officer performance.</span>' +
+        '</div>';
+    }
+    showNotification('Feedback submitted! ⭐ ' + rating + '/5 — Thank you.', 'success');
+  }, 900);
+}
+
+// ====================================================
+// FIX 3 — ESCALATION PANEL (injected into Dashboard)
+// ====================================================
+(function() {
+  var ESC_DATA = [
+    { id:'GRIEVA/2026/112843', dept:'Municipal Corporation', days:4, level:'critical', icon:'🚨', reason:'No water supply — 4 days overdue' },
+    { id:'GRIEVA/2026/108921', dept:'Electricity Department', days:2, level:'high',     icon:'🔴', reason:'Power outage — 2 days without action' },
+    { id:'GRIEVA/2026/103477', dept:'Transport Authority',   days:1, level:'medium',   icon:'🟡', reason:'Road pothole — approaching deadline' },
+  ];
+
+  function buildEscalationPanel() {
+    var items = ESC_DATA.map(function(e) {
+      return '<li class="escalation-item">' +
+        '<div class="esc-icon ' + e.level + '">' + e.icon + '</div>' +
+        '<div class="esc-info">' +
+          '<div class="esc-id">' + e.id + '</div>' +
+          '<div class="esc-dept">' + e.dept + ' — ' + e.reason + '</div>' +
+        '</div>' +
+        '<span class="esc-days ' + e.level + '">' + e.days + 'd overdue</span>' +
+        '<div class="esc-action">' +
+          '<button class="esc-escalate-btn" onclick="escalateComplaint(this,\'' + e.id + '\')">⬆ Escalate</button>' +
+        '</div>' +
+      '</li>';
+    }).join('');
+
+    return '<div class="escalation-panel" id="escalationPanel">' +
+      '<div class="escalation-panel-header">' +
+        '<h4>⚠️ Escalation Alerts — Action Required</h4>' +
+        '<span class="escalation-badge">' + ESC_DATA.length + ' Overdue</span>' +
+      '</div>' +
+      '<ul class="escalation-list">' + items + '</ul>' +
+      '<div class="escalation-footer">' +
+        '<span>Auto-escalation triggers if no action within SLA window</span>' +
+        '<a href="track.html" style="color:#e07b00;font-weight:600;font-size:0.75rem;">View All →</a>' +
+      '</div>' +
+    '</div>';
+  }
+
+  window.escalateComplaint = function(btn, id) {
+    btn.textContent = '✅ Escalated';
+    btn.classList.add('done');
+    btn.disabled = true;
+    showNotification('Complaint ' + id + ' escalated to senior officer.', 'success');
+    var badge = document.querySelector('.escalation-badge');
+    if (badge) {
+      var n = parseInt(badge.textContent) - 1;
+      badge.textContent = Math.max(0, n) + ' Overdue';
+    }
+  };
+
+  // Inject after KPI grid on dashboard page
+  document.addEventListener('DOMContentLoaded', function() {
+    var page = window.location.pathname.split('/').pop();
+    if (page !== 'dashboard.html') return;
+    // Wait for dashboard to init
+    setTimeout(function() {
+      var kpiGrid = document.querySelector('.kpi-grid');
+      if (!kpiGrid) return;
+      var panel = document.createElement('div');
+      panel.innerHTML = buildEscalationPanel();
+      kpiGrid.parentNode.insertBefore(panel.firstChild, kpiGrid.nextSibling);
+    }, 300);
+  });
+})();
