@@ -473,6 +473,29 @@ function initDashboard() {
     const roles = el.dataset.role.split(',');
     el.style.display = roles.includes(role) ? '' : 'none';
   });
+
+  // FIX 4: Live dashboard — add LIVE badge and simulate real-time ticking
+  const dashDate = document.getElementById('dashDate');
+  if (dashDate) {
+    dashDate.innerHTML = new Date().toLocaleDateString('en-IN',{dateStyle:'full'}) +
+      ' <span class="kpi-live-badge">🟢 LIVE</span>';
+  }
+
+  // Simulate live complaint counter ticking every 8-12 seconds
+  const bigCounters = document.querySelectorAll('.kpi-card .kpi-value[data-count]');
+  bigCounters.forEach(function(el) {
+    var base = parseInt(el.dataset.count) || 0;
+    if (base < 100) return; // only animate big numbers
+    var suffix = el.dataset.suffix || '';
+    setInterval(function() {
+      var bump = Math.floor(Math.random() * 3) + 1;
+      base += bump;
+      el.textContent = base.toLocaleString('en-IN') + suffix;
+      el.style.transition = 'color 0.3s';
+      el.style.color = '#2ea855';
+      setTimeout(function() { el.style.color = ''; }, 600);
+    }, Math.floor(Math.random() * 8000) + 7000);
+  });
 }
 
 function showNotification(message, type = 'info') {
@@ -725,51 +748,84 @@ function resetCameraUI() {
   });
 }
 
-// ── Override showComplaintSuccess to show AI classification ──
-var _origShowComplaintSuccess = window.showComplaintSuccess;
+// ── FIX 3: Rich success card with ID, AI summary, timeline ──
 window.showComplaintSuccess = function(id, apiData) {
   var result = document.getElementById('complaintResult');
   if (!result) return;
 
-  // Build extra info from API response if available
-  var extraInfo = '';
-  if (apiData) {
-    extraInfo = '\
-      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">\
-        <div style="background:#f0f8ff;border:1px solid #bee3f8;border-radius:4px;padding:8px;">\
-          <small style="color:#718096;font-size:0.72rem;display:block;">🤖 AI Category</small>\
-          <strong style="color:#003366;">' + (apiData.category || 'Classified') + '</strong>\
-        </div>\
-        <div style="background:#f0fff4;border:1px solid #b7e4c7;border-radius:4px;padding:8px;">\
-          <small style="color:#718096;font-size:0.72rem;display:block;">⚡ Priority</small>\
-          <strong style="color:#1a7a3f;">' + (apiData.priority || 'Medium') + '</strong>\
-        </div>\
-        <div style="background:#fff5f0;border:1px solid #ffd0a0;border-radius:4px;padding:8px;">\
-          <small style="color:#718096;font-size:0.72rem;display:block;">🏛️ Department</small>\
-          <strong style="color:#cc4400;">' + (apiData.department || 'Auto-assigned') + '</strong>\
-        </div>\
-        <div style="background:#f8f0ff;border:1px solid #d6b4f0;border-radius:4px;padding:8px;">\
-          <small style="color:#718096;font-size:0.72rem;display:block;">📊 Status</small>\
-          <strong style="color:#6b21a8;">' + (apiData.status || 'Pending') + '</strong>\
-        </div>\
-      </div>';
-    if (apiData.latitude || apiData.longitude) {
-      extraInfo += '<div style="margin-top:8px;background:#f0f8f0;border:1px solid #b7e4c7;border-radius:4px;padding:8px;font-size:0.8rem;color:#1a7a3f;">\
-        📍 Geo-verified: Lat ' + (apiData.latitude || window.GrievCamera && window.GrievCamera.getLatitude()) +
-        ' | Lng ' + (apiData.longitude || window.GrievCamera && window.GrievCamera.getLongitude()) + '</div>';
-    }
+  // Pull AI detection data from live panel
+  var detectedDept   = document.getElementById('liveAIDept')   ? document.getElementById('liveAIDept').textContent   : 'Auto-assigned';
+  var detectedIcon   = document.getElementById('liveAIIcon')   ? document.getElementById('liveAIIcon').textContent   : '🏛️';
+  var detectedUrgency = document.getElementById('liveUrgencyLabel') ? document.getElementById('liveUrgencyLabel').textContent : 'MEDIUM';
+  var hiddenDept     = document.getElementById('fDeptHidden')  ? document.getElementById('fDeptHidden').value        : '';
+  var deptFinal      = (apiData && apiData.department) || hiddenDept || detectedDept;
+  var priorityFinal  = (apiData && apiData.priority)   || detectedUrgency;
+  var now            = new Date();
+  var eta            = new Date(now.getTime() + 21 * 86400000);
+  var fmtDate        = function(d) { return d.toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' }); };
+
+  // Geo info
+  var geoHtml = '';
+  if (window.GrievCamera && window.GrievCamera.getLatitude && window.GrievCamera.getLatitude()) {
+    geoHtml = '<div style="background:#f0fff4;border:1px solid #b7e4c7;border-radius:6px;padding:8px 12px;font-size:0.78rem;color:#1a7a3f;display:flex;align-items:center;gap:6px;">' +
+      '📍 <strong>Geo-verified location embedded</strong> — Coordinates attached to complaint record.</div>';
   }
 
-  result.innerHTML = '\
-    <div class="alert alert-success" style="flex-direction:column;gap:8px;">\
-      <strong>✅ Complaint Filed Successfully!</strong>\
-      <span>Your Complaint ID: <strong style="font-size:1.05rem;letter-spacing:1px;">' + id + '</strong></span>\
-      <span style="font-size:0.82rem;">Save this ID to track your complaint. SMS/Email updates will be sent.</span>\
-      ' + extraInfo + '\
-      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">\
-        <a href="track.html" class="btn btn-navy btn-sm">Track Complaint</a>\
-        <button onclick="copyToClipboard(\'' + id + '\')" class="btn btn-outline-navy btn-sm">Copy ID</button>\
-      </div>\
-    </div>';
+  result.innerHTML =
+    '<div class="success-card">' +
+      '<div class="success-card-header">' +
+        '<div style="font-size:2rem;margin-bottom:6px;">✅</div>' +
+        '<h3>Complaint Filed Successfully!</h3>' +
+        '<p>Your grievance has been registered and routed by AI</p>' +
+        '<div class="success-id-box">' + id + '</div>' +
+      '</div>' +
+      '<div class="success-card-body">' +
+        '<div class="success-meta-grid">' +
+          '<div class="success-meta-item" style="background:#f0f8ff;">' +
+            '<small>🤖 AI-Detected Department</small>' +
+            '<strong>' + detectedIcon + ' ' + deptFinal + '</strong>' +
+          '</div>' +
+          '<div class="success-meta-item" style="background:#fff8f0;">' +
+            '<small>⚡ Priority Level</small>' +
+            '<strong>' + priorityFinal + '</strong>' +
+          '</div>' +
+          '<div class="success-meta-item" style="background:#f0fff4;">' +
+            '<small>📅 Filed On</small>' +
+            '<strong>' + fmtDate(now) + '</strong>' +
+          '</div>' +
+          '<div class="success-meta-item" style="background:#faf0ff;">' +
+            '<small>📋 Expected Resolution</small>' +
+            '<strong>' + fmtDate(eta) + '</strong>' +
+          '</div>' +
+        '</div>' +
+        geoHtml +
+        '<div class="success-mini-timeline" style="margin-top:14px;">' +
+          '<h5>📍 Processing Timeline</h5>' +
+          '<div class="smt-item">' +
+            '<div class="smt-dot done">✅</div>' +
+            '<div class="smt-text"><h6>Complaint Registered</h6><p>Assigned ID: ' + id + ' — ' + fmtDate(now) + '</p></div>' +
+          '</div>' +
+          '<div class="smt-item">' +
+            '<div class="smt-dot done">🤖</div>' +
+            '<div class="smt-text"><h6>AI Classification Complete</h6><p>Routed to ' + deptFinal + '</p></div>' +
+          '</div>' +
+          '<div class="smt-item">' +
+            '<div class="smt-dot active">🔵</div>' +
+            '<div class="smt-text"><h6>Under Officer Review</h6><p>A nodal officer has been assigned</p></div>' +
+          '</div>' +
+          '<div class="smt-item">' +
+            '<div class="smt-dot wait">⭕</div>' +
+            '<div class="smt-text"><h6>Resolution &amp; Feedback</h6><p>Expected by ' + fmtDate(eta) + '</p></div>' +
+          '</div>' +
+        '</div>' +
+        '<p style="font-size:0.75rem;color:#718096;margin:10px 0 14px;">📱 You will receive SMS &amp; Email updates at every stage. Save your Complaint ID.</p>' +
+        '<div class="success-card-actions">' +
+          '<a href="track.html" class="btn btn-navy btn-sm">🔍 Track Complaint</a>' +
+          '<button onclick="copyToClipboard(\'' + id + '\')" class="btn btn-outline-navy btn-sm">📋 Copy ID</button>' +
+          '<button onclick="window.print()" class="btn btn-outline-navy btn-sm">🖨 Print Receipt</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
   result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 };

@@ -538,3 +538,137 @@
   }
 
 })();
+
+// ====================================================
+// FIX 1+2: LIVE AI TYPING PANEL + URGENCY METER
+// Runs on every keystroke — updates dept + sentiment
+// ====================================================
+(function() {
+  'use strict';
+
+  var URGENCY_CONFIG = {
+    CRITICAL: { pct:100, color:'#c0392b', bg:'#fdf0f0', border:'#f5a6a6', label:'🚨 CRITICAL PRIORITY', pill:'🚨 CRITICAL — Immediate escalation', barGrad:'#e74c3c' },
+    HIGH:     { pct:75,  color:'#e07b00', bg:'#fff7ed', border:'#fbd38d', label:'🔴 HIGH PRIORITY',     pill:'🔴 HIGH — Fast-tracked for action', barGrad:'#FF6600' },
+    MEDIUM:   { pct:45,  color:'#b7791f', bg:'#fffbeb', border:'#f6d860', label:'🟡 MEDIUM PRIORITY',   pill:'🟡 MEDIUM — Routed normally', barGrad:'#f6ad55' },
+    LOW:      { pct:20,  color:'#1a7a3f', bg:'#f0fff4', border:'#b7e4c7', label:'🟢 LOW PRIORITY',      pill:'🟢 LOW — Standard processing', barGrad:'#48bb78' }
+  };
+
+  var CONF_STYLES = {
+    high:   { bg:'#c6f6d5', color:'#1a7a3f', border:'#68d391', label:'✅ High Confidence' },
+    medium: { bg:'#fefcbf', color:'#b7791f', border:'#f6e05e', label:'🔶 Medium Confidence' },
+    low:    { bg:'#e9d8fd', color:'#553c9a', border:'#d6b4f0', label:'⬜ Low Confidence' }
+  };
+
+  var _debounceTimer = null;
+
+  function updateLivePanel(text) {
+    var panel        = document.getElementById('liveAIPanel');
+    var iconEl       = document.getElementById('liveAIIcon');
+    var deptEl       = document.getElementById('liveAIDept');
+    var confEl       = document.getElementById('liveAIConfBadge');
+    var methodEl     = document.getElementById('liveAIMethod');
+    var fillEl       = document.getElementById('liveUrgencyFill');
+    var labelEl      = document.getElementById('liveUrgencyLabel');
+    var pillEl       = document.getElementById('liveUrgencyPill');
+    var keywordsEl   = document.getElementById('liveAIKeywords');
+    var hintEl       = document.getElementById('liveAIHint');
+
+    if (!panel) return;
+
+    if (!text || text.trim().length < 5) {
+      // Reset to idle state
+      if (iconEl)    iconEl.textContent    = '🏛️';
+      if (deptEl)    deptEl.textContent    = 'Start typing your complaint…';
+      if (confEl)    { confEl.textContent = 'Waiting…'; confEl.style.cssText = 'background:#e9d8fd;color:#553c9a;border:1px solid #d6b4f0;padding:3px 10px;border-radius:20px;font-size:0.68rem;font-weight:700;'; }
+      if (fillEl)    { fillEl.style.width = '5%'; fillEl.style.background = '#a0aec0'; }
+      if (labelEl)   labelEl.textContent  = '—';
+      if (pillEl)    { pillEl.textContent = '⏳ Waiting for input…'; pillEl.style.cssText = 'background:#f7f8fa;color:#718096;border-color:#e2e8f0;display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:700;border-width:1.5px;border-style:solid;margin-top:6px;'; }
+      if (keywordsEl) keywordsEl.innerHTML = '';
+      if (hintEl)    hintEl.textContent   = 'Type at least 10 characters for AI analysis';
+      return;
+    }
+
+    // Run classifier
+    var result = window.GrievAI_Dept && window.GrievAI_Dept.classify(text);
+    if (!result) return;
+
+    var urgencyKey = 'LOW';
+    if (result.urgency) {
+      var ul = result.urgency.label || '';
+      if (ul.indexOf('CRITICAL') !== -1)    urgencyKey = 'CRITICAL';
+      else if (ul.indexOf('HIGH') !== -1)   urgencyKey = 'HIGH';
+      else if (ul.indexOf('MEDIUM') !== -1) urgencyKey = 'MEDIUM';
+    }
+    var uc   = URGENCY_CONFIG[urgencyKey];
+    var conf = CONF_STYLES[result.confidence || 'low'];
+
+    // Update icon + dept
+    if (iconEl) iconEl.textContent = result.icon || '🏛️';
+    if (deptEl) deptEl.textContent = result.dept || 'Detecting…';
+
+    // Update confidence badge
+    if (confEl) {
+      confEl.textContent  = conf.label;
+      confEl.style.cssText = 'background:' + conf.bg + ';color:' + conf.color + ';border:1px solid ' + conf.border + ';padding:3px 10px;border-radius:20px;font-size:0.68rem;font-weight:700;white-space:nowrap;flex-shrink:0;margin-left:auto;';
+    }
+
+    // Update method badge
+    if (methodEl) {
+      methodEl.textContent = result.method || 'NLP+Phonetic';
+      methodEl.style.display = 'inline-block';
+    }
+
+    // Update urgency meter
+    if (fillEl) {
+      fillEl.style.width      = uc.pct + '%';
+      fillEl.style.background = 'linear-gradient(90deg,' + uc.barGrad + ',' + uc.color + ')';
+    }
+    if (labelEl) labelEl.textContent = uc.label;
+    if (pillEl) {
+      pillEl.textContent = uc.pill;
+      pillEl.style.cssText = 'background:' + uc.bg + ';color:' + uc.color + ';border-color:' + uc.border + ';display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:700;border-width:1.5px;border-style:solid;margin-top:6px;';
+    }
+
+    // Update matched keywords
+    if (keywordsEl && result.matched && result.matched.length) {
+      keywordsEl.innerHTML = result.matched.slice(0, 8).map(function(k) {
+        return '<code style="background:#edf2f7;color:#4a5568;padding:2px 7px;border-radius:4px;font-size:0.68rem;">' + k + '</code>';
+      }).join('');
+    }
+
+    // Update hint
+    if (hintEl) {
+      var hints = { high: '✅ Department identified with high confidence', medium: '🔶 Reasonable match — add more details for accuracy', low: '💡 Keep typing — AI needs more context to classify' };
+      hintEl.textContent = hints[result.confidence || 'low'];
+    }
+
+    // Sync hidden fields (for form submission)
+    var hd = document.getElementById('fDeptHidden');
+    if (hd) hd.value = result.dept;
+    var hp = document.getElementById('fPriorityHidden');
+    if (hp && result.urgency) hp.value = result.urgency.label;
+  }
+
+  // Debounced listener — fires 180ms after user stops typing
+  function attachLivePanelListeners() {
+    var descField    = document.getElementById('fdesc');
+    var subjectField = document.getElementById('fsubject');
+    if (!descField && !subjectField) return;
+
+    function onInput() {
+      clearTimeout(_debounceTimer);
+      var text = ((subjectField ? subjectField.value : '') + ' ' + (descField ? descField.value : '')).trim();
+      _debounceTimer = setTimeout(function() { updateLivePanel(text); }, 180);
+    }
+
+    if (descField)    { descField.addEventListener('input', onInput); descField.addEventListener('paste', onInput); }
+    if (subjectField) { subjectField.addEventListener('input', onInput); }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachLivePanelListeners);
+  } else {
+    attachLivePanelListeners();
+  }
+
+})();
