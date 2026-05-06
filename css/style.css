@@ -3465,26 +3465,22 @@ body.lang-rtl .chatbot-close { margin-left: 0; margin-right: auto; }
    Uses dedicated utility classes only — no collisions
    ==================================================== */
 
-/* ── Utility Classes (Mobile-first defaults) ─────── */
+/* ── FIXED: Single language control — nav dropdown on ALL screen sizes ── */
 
-/* Header language dropdown → hidden on mobile by default */
+/* Header language dropdown → always visible (single, no duplicate) */
 .lang-desktop {
-  display: none !important;
-}
-
-/* Bottom language bar → visible on mobile by default */
-.lang-mobile {
   display: flex !important;
 }
 
-/* ── Desktop / Tablet ≥ 768px ────────────────────── */
-@media (min-width: 768px) {
-  .lang-desktop {
-    display: flex !important;   /* restores nav-lang-wrap flex layout */
-  }
-  .lang-mobile {
-    display: none !important;   /* removes bar from layout — zero space */
-  }
+/* Mobile bar / lang strip → always hidden (removed, nav dropdown handles it) */
+.lang-mobile,
+.lang-mobile-bar,
+#mobileLangBar,
+.lang-bar,
+#langBar {
+  display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
 }
 
 /* ── Mobile Language Bar Styling ─────────────────── */

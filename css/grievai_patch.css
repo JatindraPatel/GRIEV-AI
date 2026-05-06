@@ -1,0 +1,218 @@
+/* ==========================================================================
+   GrievAI – Performance & UX Patch v1.0
+   Fixes:
+     1. Chatbot: ensure fixed floating position on ALL pages
+     2. Lang bar below home: completely hidden (CSS kill)
+     3. Mobile language selector: fully visible, no duplicate
+     4. Scroll performance: throttle, RAF, will-change cleanup
+     5. Mobile nav language dropdown visible on mobile
+   ========================================================================== */
+
+
+/* ── 1. CHATBOT: Ensure widget is FIXED (floating) on every page ── */
+#cbWidget {
+  position: fixed !important;
+  bottom: 28px !important;
+  right: 28px !important;
+  z-index: 99999 !important;
+}
+
+/* cbFab must be positioned relative inside the fixed widget */
+#cbWidget .cb-fab {
+  position: relative !important;
+}
+
+/* cbPanel is absolute within the fixed widget — keep as-is */
+#cbWidget .cb-panel {
+  position: absolute !important;
+  bottom: 70px !important;
+  right: 0 !important;
+}
+
+
+/* ── 2. KILL the lang-bar strip below home section (REMOVE ENTIRELY) ── */
+.lang-bar,
+.lang-bar-inner,
+[class*="lang-bar"],
+#langBar,
+.page-lang-bar {
+  display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+/* Kill the inline lang strip injected by lang.js if present */
+.lang-strip,
+.breadcrumb-bar + .lang-bar,
+.breadcrumb-bar ~ .lang-bar {
+  display: none !important;
+}
+
+
+/* ── 3. MOBILE: Language dropdown — visible on ALL screen sizes ── */
+
+/* The nav-lang-wrap shows the dropdown — ensure it appears on mobile too */
+.nav-lang-wrap {
+  display: flex !important;
+  align-items: center;
+  position: relative;
+}
+
+/* On mobile: show it in the hamburger-expanded area */
+@media (max-width: 900px) {
+  /* Keep the lang dropdown accessible — move into a known visible spot */
+  .nav-right-group {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Make the dropdown button text truncate gracefully on small screens */
+  #cpgramsDropBtn {
+    max-width: 120px;
+    font-size: 0.75rem;
+    padding: 5px 8px;
+  }
+
+  #cpgramsDropBtn span:nth-child(2) {
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Dropdown list on mobile: full-width, anchored to right */
+  .nav-lang-list.open {
+    right: 0;
+    left: auto;
+    min-width: 200px;
+    max-height: 55vh;
+  }
+
+  /* Hide mobile-bar duplicate (we keep the nav dropdown only) */
+  .lang-mobile-bar,
+  .lang-mobile,
+  #mobileLangBar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  /* On very small screens keep the dropdown overlay full-width */
+  .nav-lang-list.open {
+    right: -8px;
+    min-width: 90vw;
+    max-height: 60vh;
+  }
+
+  #cpgramsDropBtn span:nth-child(2) {
+    display: none; /* just show globe + arrow to save space */
+  }
+
+  #cbWidget {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+}
+
+
+/* ── 4. SCROLL PERFORMANCE: Remove or reduce expensive CSS ── */
+
+/* Remove expensive backdrop-filter if present anywhere */
+.site-header,
+.main-nav,
+.cb-panel,
+.nav-lang-list {
+  /* Replace backdrop-filter blur with solid bg — avoids GPU compositing cost */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Promote only elements that actively animate to their own layer */
+.cb-fab {
+  will-change: transform;
+  transform: translateZ(0); /* force GPU layer only for FAB */
+}
+
+.cb-panel {
+  will-change: opacity, transform;
+}
+
+/* All other elements: no will-change (was causing memory pressure) */
+.hero-section,
+.feature-card,
+.quick-action-card,
+.kpi-card,
+.card,
+.process-step,
+.notice-board,
+.data-table,
+.complaint-form-section,
+.track-box {
+  will-change: auto !important;
+}
+
+/* Reduce heavy box-shadows to lighter equivalents */
+.card {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07) !important;
+}
+
+.feature-card {
+  box-shadow: 0 1px 4px rgba(0,0,0,0.07) !important;
+}
+
+.complaint-form-section {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.09) !important;
+}
+
+/* Use transform: translateZ(0) only on site-header for sticky scroll perf */
+.site-header {
+  transform: translateZ(0);
+  will-change: auto;
+  /* Remove any transition on scroll-related props */
+  transition: box-shadow 0.2s ease;
+}
+
+/* Prevent layout thrashing on scroll: contain paint on sections */
+.page-content > section,
+.dash-main > div {
+  contain: layout style;
+}
+
+/* Smooth scrollbar without scroll-behavior on body (let JS handle it) */
+html {
+  scroll-behavior: auto; /* prevent janky forced smooth scroll on every anchor */
+}
+
+/* Intersection observer replaces scroll animations —
+   disable any CSS that triggers on scroll by removing transform defaults */
+.hero-stat,
+.feature-card,
+.process-step,
+.quick-action-card {
+  /* No transition on transform by default — only animate when class applied */
+  transition: box-shadow 0.18s ease, border-color 0.18s ease !important;
+}
+
+/* ── 5. MOBILE NAV: Language group always visible in hamburger menu ── */
+@media (max-width: 900px) {
+  /* When mobile nav is open, show lang dropdown in nav area */
+  .nav-menu.open ~ .nav-right-group,
+  .nav-right-group {
+    display: flex !important;
+  }
+
+  /* Sign-in button: shorten text on mobile */
+  .nav-signin-btn {
+    font-size: 0.78rem !important;
+    padding: 6px 10px !important;
+    white-space: nowrap;
+  }
+
+  .nav-signin-btn span {
+    display: none; /* hide arrow icon on small screens */
+  }
+}
