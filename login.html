@@ -23,6 +23,31 @@
   <div class="login-wrapper">
     <div style="width:100%;max-width:520px;">
 
+      <!-- FIX 5: DEMO CREDENTIALS PANEL -->
+      <div class="demo-creds-panel">
+        <h4>🎯 Hackathon Demo — One-Click Login</h4>
+        <div class="demo-creds-grid">
+          <div class="demo-cred-card" onclick="demoLogin('citizen','9876543210','citizen123')">
+            <div class="dcr-icon">👤</div>
+            <div class="dcr-role">Citizen</div>
+            <div class="dcr-creds">Mobile: 9876543210<br>Password: citizen123</div>
+            <button class="dcr-btn">Login as Citizen</button>
+          </div>
+          <div class="demo-cred-card" onclick="demoLogin('officer','IAS-2024-MH-001','officer123')">
+            <div class="dcr-icon">🏛️</div>
+            <div class="dcr-role">Officer</div>
+            <div class="dcr-creds">ID: IAS-2024-MH-001<br>Password: officer123</div>
+            <button class="dcr-btn">Login as Officer</button>
+          </div>
+          <div class="demo-cred-card" onclick="demoLogin('admin','admin','admin123')">
+            <div class="dcr-icon">⚙️</div>
+            <div class="dcr-role">Admin</div>
+            <div class="dcr-creds">Username: admin<br>Password: admin123</div>
+            <button class="dcr-btn">Login as Admin</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Notice above box -->
       <div class="alert alert-info" style="margin-bottom:18px;">
         <span>ℹ️</span>
@@ -169,6 +194,43 @@
   </div>
 
   <div id="site-footer-placeholder"></div>
+  <script>
+  // FIX 5: One-click demo login
+  function demoLogin(role, user, pass) {
+    // Switch to correct tab
+    document.querySelectorAll('.login-tab').forEach(function(t) {
+      t.classList.remove('active');
+      if (t.dataset.role === role) t.classList.add('active');
+    });
+    document.querySelectorAll('.login-form-panel').forEach(function(p) { p.style.display = 'none'; });
+    var panel = document.getElementById('panel-' + role);
+    if (panel) panel.style.display = 'block';
+
+    // Fill in credentials
+    if (role === 'citizen') {
+      var m = document.getElementById('cMobile'); if(m) m.value = user;
+      var o = document.getElementById('cOtp');    if(o) o.value = pass;
+      var c = document.getElementById('cCaptcha'); if(c) { c.value = document.getElementById('captchaCode') ? document.getElementById('captchaCode').textContent : 'AB3K9Z'; }
+    } else if (role === 'officer') {
+      var ei = document.getElementById('oEmpId');    if(ei) ei.value = user;
+      var op = document.getElementById('oPassword'); if(op) op.value = pass;
+      var od = document.getElementById('oDept');     if(od) od.selectedIndex = 1;
+      var oc = document.getElementById('oCaptcha');  if(oc) oc.value = document.getElementById('captchaCode2') ? document.getElementById('captchaCode2').textContent : 'XP5R2Q';
+    } else {
+      var au = document.getElementById('aUsername'); if(au) au.value = user;
+      var ap = document.getElementById('aPassword'); if(ap) ap.value = pass;
+      var af = document.getElementById('a2fa');      if(af) af.value = '123456';
+      var ac = document.getElementById('aCaptcha');  if(ac) ac.value = document.getElementById('captchaCode3') ? document.getElementById('captchaCode3').textContent : 'ZL8KR4';
+    }
+
+    // Short delay then redirect
+    setTimeout(function() {
+      sessionStorage.setItem('grievai_role', role);
+      sessionStorage.setItem('grievai_user', role === 'citizen' ? 'Ramesh Kumar' : role === 'officer' ? 'Officer Priya Sharma' : 'Administrator');
+      window.location.href = 'dashboard.html';
+    }, 700);
+  }
+  </script>
   <script src="js/ai_department.js"></script>
   <script src="js/camera.js"></script>
   <script src="js/lang.js"></script>

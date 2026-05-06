@@ -163,8 +163,40 @@
                 <textarea id="fdesc" name="description" class="form-control" rows="4" placeholder="Describe your grievance in detail. Include dates, locations, and any previous actions taken…" required></textarea>
                 <span class="form-hint">Minimum 50 characters. Be specific for faster resolution.</span>
               </div>
-              <!-- AI Department Detection Display -->
-              <div id="aiDeptDisplay" style="display:none;margin-bottom:18px;background:var(--info-light);border:1.5px solid #bee3f8;border-radius:var(--radius);padding:14px 16px;"></div>
+              <!-- FIX 1+2: LIVE AI PANEL + URGENCY METER -->
+              <div id="liveAIPanel" style="margin-bottom:18px;">
+                <div class="live-ai-header">
+                  <div class="live-dot-pulse"></div>
+                  <span>🤖 AI Classifying in Real-Time…</span>
+                  <span id="liveAIMethod" class="live-ai-method-badge" style="margin-left:auto;"></span>
+                </div>
+                <div class="live-ai-body">
+                  <div class="live-ai-dept-row">
+                    <div class="live-ai-icon" id="liveAIIcon">🏛️</div>
+                    <div>
+                      <div class="live-ai-dept-name" id="liveAIDept">Start typing your complaint…</div>
+                      <div class="live-ai-dept-sub">AI will auto-detect department &amp; urgency</div>
+                    </div>
+                    <span class="live-ai-conf-badge" id="liveAIConfBadge" style="background:#e9d8fd;color:#553c9a;border:1px solid #d6b4f0;">Waiting…</span>
+                  </div>
+                  <div class="urgency-meter-wrap">
+                    <div class="urgency-meter-label">
+                      <span>🧠 Sentiment &amp; Urgency Meter</span>
+                      <span id="liveUrgencyLabel">—</span>
+                    </div>
+                    <div class="urgency-meter-track">
+                      <div class="urgency-meter-fill" id="liveUrgencyFill" style="width:5%;background:#a0aec0;"></div>
+                    </div>
+                    <span id="liveUrgencyPill" class="urgency-priority-pill" style="background:#f7f8fa;color:#718096;border-color:#e2e8f0;">
+                      ⏳ Waiting for input…
+                    </span>
+                  </div>
+                  <div class="live-ai-keywords" id="liveAIKeywords"></div>
+                  <div class="live-ai-typing-hint" id="liveAIHint">Type at least 10 characters for AI analysis</div>
+                </div>
+              </div>
+              <!-- Hidden field updated by live panel -->
+              <div id="aiDeptDisplay" style="display:none;"></div>
               <div class="form-group">
                 <label>
                   <input type="checkbox" required> I declare that the information provided is true and correct to the best of my knowledge.
