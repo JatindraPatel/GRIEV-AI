@@ -543,7 +543,7 @@
 
     btn.onclick = function() {
       if (recording) { rec.stop(); return; }
-      rec.lang = SESSION.lang === 'hi' ? 'hi-IN' : 'en-IN';
+      rec.lang = window._grievai_voice_lang || (SESSION.lang === 'hi' ? 'hi-IN' : 'en-IN');
       try { rec.start(); } catch(e){}
     };
     rec.onstart  = function(){ recording = true;  btn.textContent = '🔴'; btn.title = 'Listening…'; };
