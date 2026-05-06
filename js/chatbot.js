@@ -408,7 +408,7 @@
       var btn = document.createElement('button');
       btn.className = 'cb-sugg-btn';
       btn.textContent = s;
-      btn.onclick = function(){ row.remove(); sendMessage(s); };
+      btn.onclick = function(e){ e.stopPropagation(); row.remove(); sendMessage(s); };
       row.appendChild(btn);
     });
     msgs.appendChild(row);
@@ -445,7 +445,8 @@
       var btn = document.createElement('button');
       btn.className = 'cb-lang-btn';
       btn.innerHTML = '<span class="cb-lang-main">' + opt.label + '</span><span class="cb-lang-sub">' + opt.sub + '</span>';
-      btn.onclick = function() {
+      btn.onclick = function(e) {
+        e.stopPropagation();
         selectLanguage(opt.code);
         row.remove();
       };
@@ -577,7 +578,7 @@
       panel.setAttribute('aria-hidden','true');
     }
 
-    fab.onclick = function(){ panel.classList.contains('open') ? closePanel() : openPanel(); };
+    fab.onclick = function(e){ e.stopPropagation(); panel.classList.contains('open') ? closePanel() : openPanel(); };
     closeBtn.onclick = closePanel;
 
     clearBtn.onclick = function() {
@@ -593,8 +594,8 @@
       showLangPicker();
     };
 
-    sendBtn.onclick = function(){ sendMessage(input.value); };
-    input.onkeydown = function(e){ if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(input.value); } };
+    sendBtn.onclick = function(e){ e.stopPropagation(); sendMessage(input.value); };
+    input.onkeydown = function(e){ if (e.key==='Enter' && !e.shiftKey){ e.preventDefault(); e.stopPropagation(); sendMessage(input.value); } };
 
     // Sync language when site language changes
     document.addEventListener('click', function(e) {
@@ -610,12 +611,16 @@
       }
     });
 
-    // Close on outside click
-    document.onclick = function(e) {
-      if (panel.classList.contains('open') && !panel.contains(e.target) && !fab.contains(e.target)) {
-        closePanel();
-      }
-    };
+    // Close on outside click — use addEventListener (not .onclick) so we
+    // don't overwrite the lang-sync listener set just above. Also guard
+    // against clicks that originated INSIDE the widget bubbling out.
+    document.addEventListener('click', function(e) {
+      if (!panel.classList.contains('open')) return;
+      // If the click is inside the widget (panel OR fab), never close
+      var widget = document.getElementById('cbWidget');
+      if (widget && widget.contains(e.target)) return;
+      closePanel();
+    });
   }
 
   // ── INIT ──────────────────────────────────────────
