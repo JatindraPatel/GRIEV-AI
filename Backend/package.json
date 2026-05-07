@@ -1,0 +1,31 @@
+{
+  "name": "grievai-backend",
+  "version": "1.0.0",
+  "description": "GrievAI – Government Grievance Portal Backend API",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "worker": "node src/workers/complaintWorker.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^8.2.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.4.5",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "joi": "^17.12.2",
+    "ioredis": "^5.3.2",
+    "uuid": "^9.0.1",
+    "morgan": "^1.10.0",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.2.0",
+    "node-fetch": "^2.7.0",
+    "form-data": "^4.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}
