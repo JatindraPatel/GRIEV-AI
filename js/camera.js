@@ -32,15 +32,17 @@ window.GrievCamera = (function () {
     _watchStarted = true;
     _geoWatcher = navigator.geolocation.watchPosition(
       function(pos) {
-        _gpsBuffer.push({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy, ts: Date.now() });
-        if (_gpsBuffer.length > 6) _gpsBuffer.shift();
-        // Pre-fetch address silently if good accuracy
-        if (pos.coords.accuracy <= 60 && !_reverseAddress) {
+        var acc = pos.coords.accuracy;
+        if (acc > 100) return; // Only buffer high-quality readings
+        _gpsBuffer.push({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: acc, ts: Date.now() });
+        if (_gpsBuffer.length > 8) _gpsBuffer.shift();
+        // Pre-fetch address silently only if good accuracy
+        if (acc <= 30 && !_reverseAddress) {
           _fetchAddress(pos.coords.latitude, pos.coords.longitude, null, null, true);
         }
       },
       function() {},
-      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }  // maximumAge:0 = always fresh
     );
   }
 
@@ -76,7 +78,7 @@ window.GrievCamera = (function () {
       });
   }
 
-  // ── Fetch Location — fast 2-3 sec ──────────────
+  // ── Fetch Location — High Accuracy ±10m target ──
   function fetchLocation(statusElId, coordsElId) {
     var statusEl = document.getElementById(statusElId);
     var coordsEl = document.getElementById(coordsElId);
@@ -86,47 +88,94 @@ window.GrievCamera = (function () {
       return;
     }
 
-    // If background watcher already got a good fix — use instantly
-    var bestBuffered = _bestFromBuffer();
-    if (bestBuffered && bestBuffered.acc <= 80) {
-      _latitude  = bestBuffered.lat.toFixed(6);
-      _longitude = bestBuffered.lng.toFixed(6);
-      _accuracy  = Math.round(bestBuffered.acc);
+    _setStatus(statusEl, 'loading', '📍 Acquiring precise location…');
+
+    // ── Multi-sample GPS collection for ±10m accuracy ──
+    // We collect up to 5 readings over ~8 seconds, average the best ones.
+    var samples = [];
+    var SAMPLE_TARGET  = 5;    // collect this many readings
+    var ACCURACY_GOAL  = 15;   // metres — accept early if we hit this
+    var ACCURACY_MAX   = 100;  // reject readings worse than this
+    var SAMPLE_TIMEOUT = 12000; // max ms to wait for all samples
+    var done = false;
+    var watchId = null;
+    var timer = null;
+
+    // Use buffered background readings first (already warm)
+    _gpsBuffer.forEach(function(b) {
+      if (b.acc <= ACCURACY_MAX && (Date.now() - b.ts) < 8000) samples.push(b);
+    });
+
+    function _finish() {
+      if (done) return;
+      done = true;
+      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+      if (timer) clearTimeout(timer);
+
+      if (samples.length === 0) {
+        _locationError = 'Location unavailable';
+        _setStatus(statusEl, 'error', '❌ Could not get accurate location. Try outdoors.');
+        return;
+      }
+
+      // Sort by accuracy (best first), take top 3, average them
+      samples.sort(function(a, b) { return a.acc - b.acc; });
+      var best = samples.slice(0, Math.min(3, samples.length));
+      var avgLat = best.reduce(function(s, r) { return s + r.lat; }, 0) / best.length;
+      var avgLng = best.reduce(function(s, r) { return s + r.lng; }, 0) / best.length;
+      var bestAcc = best[0].acc; // best individual accuracy
+
+      _latitude  = avgLat.toFixed(6);
+      _longitude = avgLng.toFixed(6);
+      _accuracy  = Math.round(bestAcc);
       _locationError = null;
-      _setStatus(statusEl, 'loading', '📍 Got GPS fix — fetching address…');
+
+      // Also push averaged result into buffer
+      _gpsBuffer.push({ lat: avgLat, lng: avgLng, acc: bestAcc, ts: Date.now() });
+      if (_gpsBuffer.length > 8) _gpsBuffer.shift();
+
+      _setStatus(statusEl, 'loading', '📍 GPS locked — fetching address…');
       _fetchAddress(_latitude, _longitude, statusEl, coordsEl, false);
-      return;
     }
 
-    _setStatus(statusEl, 'loading', '📍 Locating you…');
-
-    // Fast single call with high accuracy
-    // maximumAge:5000 — use cached GPS if it's < 5s old (very fast on phones)
-    navigator.geolocation.getCurrentPosition(
+    // Watch for new readings
+    watchId = navigator.geolocation.watchPosition(
       function(pos) {
-        _latitude      = pos.coords.latitude.toFixed(6);
-        _longitude     = pos.coords.longitude.toFixed(6);
-        _accuracy      = Math.round(pos.coords.accuracy);
-        _locationError = null;
-        _gpsBuffer.push({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy, ts: Date.now() });
+        if (done) return;
+        var acc = pos.coords.accuracy;
+        if (acc > ACCURACY_MAX) return; // reject poor readings
+        samples.push({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: acc, ts: Date.now() });
+        // Also update background buffer
+        _gpsBuffer.push({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: acc, ts: Date.now() });
+        if (_gpsBuffer.length > 8) _gpsBuffer.shift();
 
-        _setStatus(statusEl, 'loading', '📍 GPS locked — fetching your address…');
-        _fetchAddress(_latitude, _longitude, statusEl, coordsEl, false);
+        var bestSoFar = samples.slice().sort(function(a,b){ return a.acc - b.acc; })[0];
+        // Update UI with current best
+        var tier = bestSoFar.acc <= 15 ? '🟢' : bestSoFar.acc <= 40 ? '🟡' : '🟠';
+        _setStatus(statusEl, 'loading', '📍 Acquiring… best so far: ' + tier + ' ±' + Math.round(bestSoFar.acc) + 'm (' + samples.length + '/' + SAMPLE_TARGET + ' samples)');
+
+        // Early exit if we hit the accuracy goal or collected enough samples
+        if (bestSoFar.acc <= ACCURACY_GOAL || samples.length >= SAMPLE_TARGET) {
+          _finish();
+        }
       },
       function(err) {
+        if (done) return;
+        // If we have some samples already, use them
+        if (samples.length > 0) { _finish(); return; }
         _locationError = 'Location unavailable';
         var msg = '❌ ';
         if (err.code === 1) msg += 'Location permission denied. Please enable it.';
         if (err.code === 2) msg += 'Position unavailable. Try outdoors.';
         if (err.code === 3) msg += 'Location timeout. Try again.';
+        done = true;
         _setStatus(statusEl, 'error', msg);
       },
-      {
-        enableHighAccuracy: true,
-        timeout:            6000,    // max 6s wait
-        maximumAge:         4000     // use cached if < 4s old — instant on phones
-      }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
+
+    // Timeout fallback: use whatever we have after SAMPLE_TIMEOUT ms
+    timer = setTimeout(_finish, SAMPLE_TIMEOUT);
   }
 
   // ── Best reading from buffer ───────────────────
@@ -225,7 +274,7 @@ window.GrievCamera = (function () {
           _setStatus(statusEl, 'error', '❌ GPS unavailable. Enable location and retry.');
           if (callback) callback(null);
         },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 }
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
       );
     } else {
       _setStatus(statusEl, 'error', '❌ Location not available.');

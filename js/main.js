@@ -105,6 +105,7 @@ document.addEventListener('DOMContentLoaded', function () {
       .then(function(data) {
         var complaintId = data.complaint_id || data.id || generateComplaintId();
         showComplaintSuccess(complaintId, data);
+        _saveComplaintToStorage(complaintId, data);
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit Complaint';
         complaintForm.reset();
@@ -117,6 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setTimeout(function() {
           var complaintId = generateComplaintId();
           showComplaintSuccess(complaintId, null);
+          _saveComplaintToStorage(complaintId, null);
           submitBtn.disabled = false;
           submitBtn.textContent = 'Submit Complaint';
           complaintForm.reset();
@@ -141,11 +143,17 @@ document.addEventListener('DOMContentLoaded', function () {
       const btn = form.querySelector('[type="submit"]');
       btn.disabled = true;
       btn.textContent = 'Searching…';
-      setTimeout(() => {
-        btn.disabled = false;
-        btn.textContent = 'Track Complaint';
-        showTrackResult(id);
-      }, 1000);
+      fetchComplaintFromBackend(id)
+        .then(function(data) {
+          btn.disabled = false;
+          btn.textContent = 'Track Complaint';
+          showTrackResult(id, data);
+        })
+        .catch(function() {
+          btn.disabled = false;
+          btn.textContent = 'Track Complaint';
+          showTrackResult(id, null);
+        });
     });
   });
 
@@ -315,38 +323,55 @@ function showComplaintSuccess(id) {
   }
 }
 
-function showTrackResult(id) {
+function showTrackResult(id, realData) {
   const result = document.getElementById('trackResult');
   if (!result) return;
-  const mock = getMockStatus(id);
-  const isResolved = mock.status === 'Resolved';
-  const feedbackHtml = isResolved ? buildFeedbackHTML(id) : '';
+
+  var d = realData || getMockStatus(id);
+  var dept     = d.dept || d.department || 'Unknown Department';
+  var officer  = d.officer || d.assigned_officer || 'Being assigned';
+  var priority = d.priority || 'Medium';
+  var status   = d.status || 'Under Review';
+  var badgeCls = d.statusCls || d.badgeClass || _statusToCls(status);
+  var timeline = (d.timeline && d.timeline.length) ? d.timeline : getMockStatus(id).timeline;
+  var isResolved = status.toLowerCase() === 'resolved' || status.toLowerCase() === 'closed';
+  var feedbackHtml = isResolved ? buildFeedbackHTML(id) : '';
+
+  function _fmt(raw) {
+    if (!raw) return '-';
+    try { return new Date(raw).toLocaleDateString('en-IN', { dateStyle: 'long' }); } catch(e) { return raw; }
+  }
+
+  var srcBadge = (realData && realData.fromBackend)
+    ? '<span style="font-size:0.7rem;background:#e6f4ea;color:#1a7a3f;padding:2px 8px;border-radius:10px;margin-left:8px;">Live from DB</span>'
+    : (realData ? '<span style="font-size:0.7rem;background:#fff7ed;color:#e07b00;padding:2px 8px;border-radius:10px;margin-left:8px;">Cached</span>' : '');
+
   result.innerHTML = `
     <div class="card mt-6">
       <div class="card-header">
         <div>
-          <h3>Complaint: ${id}</h3>
-          <span style="font-size:0.78rem;color:var(--text-muted);">Filed on: ${mock.date}</span>
+          <h3>Complaint: ${id} ${srcBadge}</h3>
+          <span style="font-size:0.78rem;color:var(--text-muted);">Filed on: ${_fmt(d.date || d.filedOn || d.filed_on || d.created_at)}</span>
         </div>
-        <span class="badge badge-${mock.badgeClass}">${mock.status}</span>
+        <span class="badge badge-${badgeCls}">${status}</span>
       </div>
       <div class="card-body">
         <div class="grid-2" style="margin-bottom:18px;">
-          <div><strong style="font-size:0.8rem;color:var(--text-muted);">Department</strong><p>${mock.dept}</p></div>
-          <div><strong style="font-size:0.8rem;color:var(--text-muted);">Assigned Officer</strong><p>${mock.officer}</p></div>
-          <div><strong style="font-size:0.8rem;color:var(--text-muted);">Priority</strong><p><span class="badge badge-warning">${mock.priority}</span></p></div>
-          <div><strong style="font-size:0.8rem;color:var(--text-muted);">Expected Resolution</strong><p>${mock.eta}</p></div>
+          <div><strong style="font-size:0.8rem;color:var(--text-muted);">Department</strong><p>${dept}</p></div>
+          <div><strong style="font-size:0.8rem;color:var(--text-muted);">Assigned Officer</strong><p>${officer}</p></div>
+          <div><strong style="font-size:0.8rem;color:var(--text-muted);">Priority</strong><p><span class="badge badge-warning">${priority}</span></p></div>
+          <div><strong style="font-size:0.8rem;color:var(--text-muted);">Expected Resolution</strong><p>${_fmt(d.eta || d.expected_resolution)}</p></div>
         </div>
         <div class="status-timeline">
-          ${mock.timeline.map(t => `
+          ${timeline.map(t => `
             <div class="timeline-item">
-              <div class="timeline-dot ${t.status}">
-                <span>${t.icon}</span>
+              <div class="timeline-dot ${t.status || t.cls || 'pending'}">
+                <span>${t.icon || '-'}</span>
               </div>
               <div class="timeline-content">
-                <h4>${t.title}</h4>
-                <span class="timeline-meta">${t.date}</span>
-                <p>${t.desc}</p>
+                <h4>${t.title || t.label || ''}</h4>
+                <span class="timeline-meta">${_fmt(t.date)}</span>
+                <p>${t.desc || t.description || ''}</p>
               </div>
             </div>`).join('')}
         </div>
@@ -354,7 +379,7 @@ function showTrackResult(id) {
       </div>
       <div class="card-footer" style="display:flex;gap:10px;flex-wrap:wrap;">
         <a href="status.html" class="btn btn-navy btn-sm">View Full Status</a>
-        <button onclick="printStatus()" class="btn btn-outline-navy btn-sm">🖨 Print</button>
+        <button onclick="printStatus()" class="btn btn-outline-navy btn-sm">Print</button>
       </div>
     </div>`;
   result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -364,84 +389,186 @@ function showTrackResult(id) {
 function renderStatusResult(id) {
   const area = document.getElementById('statusResultArea');
   if (!area) return;
-  const mock = getMockStatus(id);
-  const isResolved = mock.badgeClass === 'success';
   area.style.display = 'block';
-  area.innerHTML = `
-    <div class="card">
-      <div class="card-header">
-        <div>
-          <h3>Status Report – ${id}</h3>
-          <span style="font-size:0.78rem;color:var(--text-muted);">Last Updated: ${new Date().toLocaleDateString('en-IN', {dateStyle:'long'})}</span>
+  area.innerHTML = '<p style="color:var(--text-muted);padding:20px;text-align:center;">Loading complaint details...</p>';
+
+  fetchComplaintFromBackend(id).then(function(realData) {
+    var d = realData || getMockStatus(id);
+    var dept     = d.dept || d.department || 'Unknown Department';
+    var officer  = d.officer || d.assigned_officer || 'Being assigned';
+    var priority = d.priority || 'Medium';
+    var status   = d.status || 'Under Review';
+    var badgeCls = d.statusCls || d.badgeClass || _statusToCls(status);
+    var timeline = (d.timeline && d.timeline.length) ? d.timeline : getMockStatus(id).timeline;
+    var isResolved = status.toLowerCase() === 'resolved' || status.toLowerCase() === 'closed';
+
+    function _fmt(raw) {
+      if (!raw) return '-';
+      try { return new Date(raw).toLocaleDateString('en-IN', { dateStyle: 'long' }); } catch(e) { return raw; }
+    }
+
+    area.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <h3>Status Report - ${id}</h3>
+            <span style="font-size:0.78rem;color:var(--text-muted);">Last Updated: ${new Date().toLocaleDateString('en-IN', {dateStyle:'long'})}</span>
+          </div>
+          <span class="badge badge-${badgeCls}">${status}</span>
         </div>
-        <span class="badge badge-${mock.badgeClass}">${mock.status}</span>
-      </div>
-      <div class="card-body">
-        <table class="data-table" style="margin-bottom:22px;">
-          <tr><td style="width:180px;"><strong>Complaint ID</strong></td><td>${id}</td></tr>
-          <tr><td><strong>Department</strong></td><td>${mock.dept}</td></tr>
-          <tr><td><strong>Filed On</strong></td><td>${mock.date}</td></tr>
-          <tr><td><strong>Assigned To</strong></td><td>${mock.officer}</td></tr>
-          <tr><td><strong>Priority Level</strong></td><td><span class="badge badge-warning">${mock.priority}</span></td></tr>
-          <tr><td><strong>Expected Resolution</strong></td><td>${mock.eta}</td></tr>
-          <tr><td><strong>Current Status</strong></td><td><span class="badge badge-${mock.badgeClass}">${mock.status}</span></td></tr>
-        </table>
-        <h4 style="margin-bottom:16px;color:var(--navy);font-family:var(--font-serif);">Activity Timeline</h4>
-        <div class="status-timeline">
-          ${mock.timeline.map(t => `
-            <div class="timeline-item">
-              <div class="timeline-dot ${t.status}"><span>${t.icon}</span></div>
-              <div class="timeline-content">
-                <h4>${t.title}</h4>
-                <span class="timeline-meta">${t.date}</span>
-                <p>${t.desc}</p>
-              </div>
-            </div>`).join('')}
+        <div class="card-body">
+          <table class="data-table" style="margin-bottom:22px;">
+            <tr><td style="width:180px;"><strong>Complaint ID</strong></td><td>${id}</td></tr>
+            <tr><td><strong>Department</strong></td><td>${dept}</td></tr>
+            <tr><td><strong>Filed On</strong></td><td>${_fmt(d.date || d.filedOn || d.filed_on || d.created_at)}</td></tr>
+            <tr><td><strong>Assigned To</strong></td><td>${officer}</td></tr>
+            <tr><td><strong>Priority Level</strong></td><td><span class="badge badge-warning">${priority}</span></td></tr>
+            <tr><td><strong>Expected Resolution</strong></td><td>${_fmt(d.eta || d.expected_resolution)}</td></tr>
+            <tr><td><strong>Current Status</strong></td><td><span class="badge badge-${badgeCls}">${status}</span></td></tr>
+          </table>
+          <h4 style="margin-bottom:16px;color:var(--navy);font-family:var(--font-serif);">Activity Timeline</h4>
+          <div class="status-timeline">
+            ${timeline.map(t => `
+              <div class="timeline-item">
+                <div class="timeline-dot ${t.status || t.cls || 'pending'}"><span>${t.icon || '-'}</span></div>
+                <div class="timeline-content">
+                  <h4>${t.title || t.label || ''}</h4>
+                  <span class="timeline-meta">${_fmt(t.date)}</span>
+                  <p>${t.desc || t.description || ''}</p>
+                </div>
+              </div>`).join('')}
+          </div>
+          ${isResolved ? buildFeedbackHTML(id) : ''}
         </div>
-        ${isResolved ? buildFeedbackHTML(id) : ''}
-      </div>
-      <div class="card-footer" style="display:flex;gap:10px;flex-wrap:wrap;">
-        <button onclick="window.print()" class="btn btn-navy btn-sm">🖨 Print Report</button>
-        <a href="index.html" class="btn btn-outline-navy btn-sm">← Back to Home</a>
-      </div>
-    </div>`;
-  area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  if (isResolved) initFeedbackWidget(id);
+        <div class="card-footer" style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="window.print()" class="btn btn-navy btn-sm">Print Report</button>
+          <a href="index.html" class="btn btn-outline-navy btn-sm">Back to Home</a>
+        </div>
+      </div>`;
+    area.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (isResolved) initFeedbackWidget(id);
+  });
 }
 
 function getMockStatus(id) {
-  const depts = ['Ministry of Health', 'Dept. of Education', 'Municipal Corporation', 'Transport Authority', 'Police Department'];
+  // This is ONLY a fallback for demo/unknown IDs.
+  // Real complaints are served from fetchComplaintFromBackend() which reads MongoDB.
   const officers = ['Sh. Ramesh Kumar (IAS)', 'Dr. Priya Sharma', 'Sh. Anil Gupta', 'Ms. Kavita Singh'];
   const statuses = [
     { label: 'Under Review', cls: 'info' },
-    { label: 'In Progress', cls: 'warning' },
-    { label: 'Resolved', cls: 'success' },
-    { label: 'Pending', cls: 'navy' }
+    { label: 'In Progress',  cls: 'warning' },
+    { label: 'Resolved',     cls: 'success' },
+    { label: 'Pending',      cls: 'navy' }
   ];
   const hash = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-  // Force demo IDs to always show Resolved so feedback widget is visible during demo
+
+  // Check localStorage for complaints filed in this session/browser
+  const stored = _loadComplaintFromStorage(id);
+
   const RESOLVED_DEMOS = ['GRIEVA/2024/783421', 'GRIEVA/2026/465268'];
-  const s = RESOLVED_DEMOS.includes(id.toUpperCase()) ? { label: 'Resolved', cls: 'success' } : statuses[hash % statuses.length];
-  const d = new Date();
-  d.setDate(d.getDate() - (hash % 30));
-  const etaDate = new Date();
+  const s = RESOLVED_DEMOS.includes(id.toUpperCase())
+    ? { label: 'Resolved', cls: 'success' }
+    : (stored ? { label: stored.status, cls: stored.statusCls || 'info' } : statuses[hash % statuses.length]);
+
+  const d = stored ? new Date(stored.filedOn) : new Date();
+  if (!stored) d.setDate(d.getDate() - (hash % 30));
+
+  const etaDate = new Date(d.getTime());
   etaDate.setDate(etaDate.getDate() + 3);
 
+  const dept     = stored ? stored.dept     : 'Unknown (untracked ID)';
+  const priority = stored ? stored.priority : (hash % 2 === 0 ? 'High' : 'Medium');
+
   return {
-    status: s.label,
+    status:    s.label,
     badgeClass: s.cls,
-    dept: depts[hash % depts.length],
-    officer: officers[hash % officers.length],
-    date: d.toLocaleDateString('en-IN', { dateStyle: 'long' }),
-    priority: hash % 2 === 0 ? 'High' : 'Medium',
-    eta: etaDate.toLocaleDateString('en-IN', { dateStyle: 'long' }),
+    statusCls:  s.cls,
+    dept:      dept,
+    officer:   officers[hash % officers.length],
+    date:      d.toLocaleDateString('en-IN', { dateStyle: 'long' }),
+    priority:  priority,
+    eta:       etaDate.toLocaleDateString('en-IN', { dateStyle: 'long' }),
     timeline: [
-      { icon: '✅', status: 'completed', title: 'Complaint Received', date: d.toLocaleDateString('en-IN'), desc: 'Your complaint has been registered in the system.' },
-      { icon: '✅', status: 'completed', title: 'Verified & Assigned', date: new Date(d.getTime() + 86400000).toLocaleDateString('en-IN'), desc: 'Complaint verified and assigned to the concerned officer.' },
-      { icon: '🔵', status: 'active', title: s.label, date: new Date(d.getTime() + 2 * 86400000).toLocaleDateString('en-IN'), desc: 'The assigned officer is working on your complaint.' },
-      { icon: '⭕', status: 'pending', title: 'Resolution & Feedback', date: etaDate.toLocaleDateString('en-IN'), desc: 'Awaiting resolution. You will be notified upon closure.' }
+      { icon: '&#x2705;', status: 'completed', title: 'Complaint Received',    date: d.toLocaleDateString('en-IN'),                                    desc: 'Your complaint has been registered in the system.' },
+      { icon: '&#x2705;', status: 'completed', title: 'Verified & Assigned',   date: new Date(d.getTime() + 86400000).toLocaleDateString('en-IN'),     desc: 'Complaint verified and assigned to the concerned officer.' },
+      { icon: '&#x1F535;', status: 'active',   title: s.label,                 date: new Date(d.getTime() + 2 * 86400000).toLocaleDateString('en-IN'), desc: 'The assigned officer is working on your complaint.' },
+      { icon: '&#x2B55;', status: 'pending',   title: 'Resolution & Feedback', date: etaDate.toLocaleDateString('en-IN'),                              desc: 'Awaiting resolution. You will be notified upon closure.' }
     ]
   };
+}
+
+// ── localStorage helpers ────────────────────────────────────────────────────
+function _saveComplaintToStorage(id, apiData) {
+  try {
+    var deptEl     = document.getElementById('fDeptHidden') || document.getElementById('liveAIDept');
+    var urgencyEl  = document.getElementById('liveUrgencyLabel');
+    var dept       = (apiData && (apiData.department || apiData.dept)) ||
+                     (deptEl ? (deptEl.value || deptEl.textContent || '').trim() : '') ||
+                     'Auto-assigned';
+    var priority   = (apiData && apiData.priority) ||
+                     (urgencyEl ? urgencyEl.textContent.trim() : 'Medium');
+    var record = {
+      id: id, dept: dept, priority: priority,
+      filedOn: new Date().toISOString(),
+      status: 'Under Review', statusCls: 'info'
+    };
+    localStorage.setItem('grievai_complaint_' + id.toUpperCase(), JSON.stringify(record));
+  } catch(e) { /* storage unavailable */ }
+}
+
+function _loadComplaintFromStorage(id) {
+  try {
+    var raw = localStorage.getItem('grievai_complaint_' + id.toUpperCase());
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+
+// ── fetchComplaintFromBackend: MongoDB -> localStorage -> null ─────────────
+// Returns a Promise that resolves to data object or null.
+function fetchComplaintFromBackend(id) {
+  var API_BASE = window.GRIEVAI_API || 'http://localhost:8000/api/v1';
+  return fetch(API_BASE + '/complaints/' + encodeURIComponent(id), {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' }
+  })
+  .then(function(res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  })
+  .then(function(data) {
+    // Normalize: backend may use different key names
+    return {
+      dept:        data.department    || data.dept     || null,
+      officer:     data.assigned_officer || data.officer || null,
+      priority:    data.priority      || null,
+      status:      data.status        || 'Under Review',
+      statusCls:   _statusToCls(data.status),
+      badgeClass:  _statusToCls(data.status),
+      date:        data.filed_on      || data.created_at || data.date || null,
+      filedOn:     data.filed_on      || data.created_at || null,
+      eta:         data.expected_resolution || data.eta || null,
+      timeline:    data.timeline      || null,
+      fromBackend: true
+    };
+  })
+  .catch(function(backendErr) {
+    console.warn('[GrievAI] Backend unavailable (' + backendErr.message + '), trying localStorage...');
+    var stored = _loadComplaintFromStorage(id);
+    if (stored) {
+      stored.fromBackend = false;
+      return stored;
+    }
+    return null; // will fall back to getMockStatus in callers
+  });
+}
+
+function _statusToCls(status) {
+  if (!status) return 'info';
+  var s = status.toLowerCase();
+  if (s === 'resolved' || s === 'closed')         return 'success';
+  if (s === 'in progress' || s === 'inprogress')  return 'warning';
+  if (s === 'pending')                            return 'navy';
+  return 'info';
 }
 
 function generateCaptcha() {
