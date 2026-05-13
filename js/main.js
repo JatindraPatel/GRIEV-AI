@@ -262,15 +262,16 @@ document.addEventListener('DOMContentLoaded', function () {
         sessionStorage.setItem('grievai_token', token);
         if (token) localStorage.setItem('grievai_token', token);
 
-        window.location.href = 'dashboard.html';
+        // Citizens go to home; officers/admins go to dashboard
+        window.location.href = (userRole === 'citizen') ? 'index.html' : 'dashboard.html';
       })
       .catch(function() {
         // ── Demo/offline fallback: still works for judges ──
         var demoNames = { citizen:'Ramesh Kumar', officer:'Officer Priya Sharma', admin:'Administrator Patel' };
         sessionStorage.setItem('grievai_role', role);
         sessionStorage.setItem('grievai_user', demoNames[role] || getDemoUser(role));
-        // No real token in demo mode
-        window.location.href = 'dashboard.html';
+        // No real token in demo mode — citizens go home
+        window.location.href = (role === 'citizen') ? 'index.html' : 'dashboard.html';
       });
     });
   });

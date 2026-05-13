@@ -10,6 +10,7 @@
     { href:'about.html',       key:'nav.about',       label:'About'       },
     { href:'departments.html', key:'nav.departments', label:'Departments' },
     { href:'faq.html',         key:'nav.faq',         label:'FAQ'         },
+    { href:'feedback.html',    key:'nav.feedback',    label:'⭐ Feedback'  },
     { href:'help.html',        key:'nav.help',        label:'Help'        },
     { href:'contact.html',     key:'nav.contact',     label:'Contact'     },
     { href:'sitemap.html',     key:'nav.sitemap',     label:'Sitemap'     },

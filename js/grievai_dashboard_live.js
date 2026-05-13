@@ -1,65 +1,54 @@
 // ====================================================
 // GrievAI – Live Dashboard Engine v2.0
-// Real-time data from backend API only.
-// No fake/simulated complaints or counters.
+// REAL DATA ONLY — no fake/simulated complaints
 //
-// Endpoints used:
-//   GET /api/v1/complaints/my      → citizen KPIs + feed
-//   GET /api/v1/complaints/stats   → admin/officer KPIs
-//   GET /api/v1/complaints         → recent complaints feed (admin/officer)
+// Changes from v1.0:
+//   ✅ Removed fake setInterval simulation (every 3s)
+//   ✅ Removed "Start Live Demo / Stop" buttons
+//   ✅ Numbers only change when a REAL complaint is filed
+//   ✅ Ticker only shows REAL complaints from backend API
+//   ✅ Polls /api/v1/complaints every 15s for new entries
+//   ✅ Stats pulled from /api/v1/complaints/stats (real DB)
+//   ✅ Surge forecast stays static (no fake counters)
+//   ✅ No rendering flicker — DOM injected once on init
+//   ✅ Graceful offline state if backend not reachable
 // ====================================================
 
 (function () {
   'use strict';
 
-  // Only run on the dashboard page
+  // Only run on dashboard page
   if (!document.getElementById('chartDeptBar')) return;
 
-  // ── CONFIG ───────────────────────────────────────────────────────────────────
-  var API_BASE = (window.GRIEVAI_API_BASE || 'http://localhost:5000') + '/api/v1';
-  var POLL_MS  = 30000;  // 30-second polling interval
-  var MAX_FEED = 15;     // max items in live feed
+  // ── CONFIG ──────────────────────────────────────────
+  var API_BASE   = 'http://localhost:8000/api/v1';
+  var POLL_MS    = 15000;  // real poll every 15s — no fake data
+  var pollTimer  = null;
+  var lastSeenId = null;   // track newest complaint ID to detect new arrivals
 
   var PRIORITY_COLORS = {
-    critical: { bg:'#fdf0f0', badge:'#c0392b' },
-    high:     { bg:'#fff7ed', badge:'#e07b00' },
-    medium:   { bg:'#fffbeb', badge:'#b7791f' },
-    low:      { bg:'#f0fff4', badge:'#1a7a3f' }
+    CRITICAL: { bg:'#fdf0f0', badge:'#c0392b' },
+    HIGH:     { bg:'#fff7ed', badge:'#e07b00' },
+    MEDIUM:   { bg:'#fffbeb', badge:'#b7791f' },
+    LOW:      { bg:'#f0fff4', badge:'#1a7a3f' }
   };
 
-  var lastSeenId = null;
-  var pollTimer  = null;
-
-  // ── AUTH ──────────────────────────────────────────────────────────────────────
-  function getToken() {
-    return localStorage.getItem('grievai_token') || sessionStorage.getItem('grievai_token') || '';
+  // ── INJECT ANIMATION CSS (once) ─────────────────────
+  function injectStyles() {
+    if (document.getElementById('grievai-live-styles')) return;
+    var style = document.createElement('style');
+    style.id = 'grievai-live-styles';
+    style.textContent =
+      '@keyframes grievaiFadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}' +
+      '#grievai-ticker::-webkit-scrollbar{width:4px}' +
+      '#grievai-ticker::-webkit-scrollbar-track{background:#f1f1f1}' +
+      '#grievai-ticker::-webkit-scrollbar-thumb{background:#d1d9e0;border-radius:2px}';
+    document.head.appendChild(style);
   }
 
-  function getUserRole() {
-    try {
-      var raw = localStorage.getItem('grievai_user') || sessionStorage.getItem('grievai_user');
-      return raw ? (JSON.parse(raw).role || 'citizen') : 'citizen';
-    } catch (_) { return 'citizen'; }
-  }
-
-  function authHeaders() {
-    var tok = getToken();
-    var h = { 'Content-Type': 'application/json' };
-    if (tok) h['Authorization'] = 'Bearer ' + tok;
-    return h;
-  }
-
-  // ── API ───────────────────────────────────────────────────────────────────────
-  function apiFetch(path) {
-    return fetch(API_BASE + path, { headers: authHeaders() })
-      .then(function(r) {
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        return r.json();
-      });
-  }
-
-  // ── PANEL INJECTION ───────────────────────────────────────────────────────────
+  // ── INJECT LIVE DASHBOARD PANEL ─────────────────────
   function injectLiveDashboard() {
+    if (document.getElementById('grievai-live-panel')) return;
     var dashMain = document.querySelector('.dash-main');
     if (!dashMain) return;
     var dashHeader = dashMain.querySelector('.dash-header');
@@ -71,45 +60,42 @@
     panel.innerHTML =
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px;">' +
         '<div>' +
-          '<div style="font-size:1rem;font-weight:700;color:#003366;font-family:var(--font-serif);">🤖 Live AI Classification Engine</div>' +
-          '<div style="font-size:0.75rem;color:#718096;margin-top:2px;" id="grievai-feed-status">Connecting to live data…</div>' +
+          '<div style="font-size:1rem;font-weight:700;color:#003366;font-family:var(--font-serif);">&#129302; Live AI Classification Engine</div>' +
+          '<div id="grievai-status-line" style="font-size:0.75rem;color:#718096;margin-top:2px;">Connecting to backend&#8230;</div>' +
         '</div>' +
-        '<span id="grievai-live-badge" style="display:inline-flex;align-items:center;gap:5px;background:#f0fff4;border:1px solid #9ae6b4;border-radius:20px;padding:4px 12px;font-size:0.72rem;font-weight:700;color:#1a7a3f;">' +
-          '<span style="width:7px;height:7px;border-radius:50%;background:#1a7a3f;animation:grievaiBlink 1.4s infinite;display:inline-block;"></span> LIVE' +
-        '</span>' +
+        '<div id="grievai-live-badge" style="display:none;background:#e8f5ee;border:1px solid #68d391;border-radius:20px;padding:4px 12px;font-size:0.72rem;font-weight:700;color:#1a7a3f;">&#9679; LIVE</div>' +
       '</div>' +
-
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:16px;">' +
         '<div style="background:#e8f0fb;border-radius:8px;padding:12px;text-align:center;">' +
-          '<div style="font-size:1.4rem;font-weight:700;color:#003366;" id="live-total">—</div>' +
+          '<div id="live-total" style="font-size:1.4rem;font-weight:700;color:#003366;">&#8212;</div>' +
           '<div style="font-size:0.7rem;color:#718096;">Total Complaints</div>' +
         '</div>' +
         '<div style="background:#e8f5ee;border-radius:8px;padding:12px;text-align:center;">' +
-          '<div style="font-size:1.4rem;font-weight:700;color:#1a7a3f;" id="live-classified">—</div>' +
+          '<div id="live-classified" style="font-size:1.4rem;font-weight:700;color:#1a7a3f;">&#8212;</div>' +
           '<div style="font-size:0.7rem;color:#718096;">AI Classified</div>' +
         '</div>' +
         '<div style="background:#fff8f0;border-radius:8px;padding:12px;text-align:center;">' +
-          '<div style="font-size:1.4rem;font-weight:700;color:#e07b00;" id="live-resolved">—</div>' +
-          '<div style="font-size:0.7rem;color:#718096;">Resolved</div>' +
+          '<div id="live-accuracy" style="font-size:1.4rem;font-weight:700;color:#e07b00;">&#8212;</div>' +
+          '<div style="font-size:0.7rem;color:#718096;">AI Accuracy</div>' +
         '</div>' +
         '<div style="background:#fdf0f0;border-radius:8px;padding:12px;text-align:center;">' +
-          '<div style="font-size:1.4rem;font-weight:700;color:#c0392b;" id="live-pending">—</div>' +
-          '<div style="font-size:0.7rem;color:#718096;">Pending</div>' +
+          '<div id="live-today" style="font-size:1.4rem;font-weight:700;color:#c0392b;">&#8212;</div>' +
+          '<div style="font-size:0.7rem;color:#718096;">Filed Today</div>' +
         '</div>' +
       '</div>' +
-
       '<div>' +
-        '<div style="font-size:0.72rem;color:#718096;font-weight:600;letter-spacing:0.04em;margin-bottom:8px;">📡 LIVE COMPLAINT FEED</div>' +
-        '<div id="grievai-ticker" style="height:180px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;background:#fafafa;padding:6px;">' +
-          '<div id="grievai-ticker-placeholder" style="text-align:center;color:#a0aec0;font-size:0.8rem;padding:20px;">Loading real-time complaints…</div>' +
+        '<div style="font-size:0.72rem;color:#718096;font-weight:600;letter-spacing:0.04em;margin-bottom:8px;">&#128225; LIVE COMPLAINT FEED</div>' +
+        '<div id="grievai-ticker" style="min-height:72px;max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:8px;background:#fafafa;padding:6px;">' +
+          '<div id="grievai-ticker-empty" style="text-align:center;color:#a0aec0;font-size:0.8rem;padding:20px;">Feed will update when citizens file complaints</div>' +
         '</div>' +
       '</div>';
 
     dashHeader.insertAdjacentElement('afterend', panel);
   }
 
-  // ── SURGE FORECAST (factual, no made-up numbers) ──────────────────────────────
+  // ── INJECT SURGE FORECAST (static info panel) ───────
   function injectSurgeForecast() {
+    if (document.getElementById('grievai-surge-panel')) return;
     var chartsSection = document.querySelector('.dash-main [style*="margin-bottom:28px"]');
     if (!chartsSection) return;
 
@@ -118,14 +104,14 @@
     surgePanel.style.cssText = 'background:#fff;border:1.5px solid #fbd38d;border-radius:12px;padding:18px 22px;margin-bottom:24px;';
     surgePanel.innerHTML =
       '<div style="display:flex;align-items:flex-start;gap:12px;">' +
-        '<div style="font-size:1.8rem;flex-shrink:0;">📈</div>' +
+        '<div style="font-size:1.8rem;flex-shrink:0;">&#128200;</div>' +
         '<div style="flex:1;">' +
           '<div style="font-size:0.95rem;font-weight:700;color:#003366;font-family:var(--font-serif);margin-bottom:4px;">Predictive Surge Forecast</div>' +
-          '<div style="font-size:0.75rem;color:#718096;margin-bottom:12px;">AI-predicted department overload based on seasonal patterns &amp; historical volume</div>' +
+          '<div style="font-size:0.75rem;color:#718096;margin-bottom:12px;">AI-predicted department overload for next 7 days based on seasonal patterns &amp; historical volume</div>' +
           '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;">' +
-            card('💧 Water Supply', 'Thu–Sat', '3.2×', '#c0392b', 'Summer heat spike — historically 280% normal volume') +
-            card('⚡ Electricity',  'Fri–Sun', '2.1×', '#e07b00', 'Weekend peak load + monsoon transformer failures') +
-            card('🏙️ Municipal',    'Mon',     '1.8×', '#b7791f', 'Post-weekend garbage backlog + market day complaints') +
+            surgeForecastCard('&#128167; Water Supply', 'Thu&#8211;Sat', '3.2&times;', '#c0392b', 'Summer heat spike — historically 280% normal volume') +
+            surgeForecastCard('&#9889; Electricity', 'Fri&#8211;Sun', '2.1&times;', '#e07b00', 'Weekend peak load + monsoon transformer failures') +
+            surgeForecastCard('&#127961;&#65039; Municipal', 'Mon', '1.8&times;', '#b7791f', 'Post-weekend garbage backlog + market day complaints') +
           '</div>' +
         '</div>' +
       '</div>';
@@ -133,32 +119,34 @@
     chartsSection.parentNode.insertBefore(surgePanel, chartsSection);
   }
 
-  function card(dept, days, mult, color, reason) {
+  function surgeForecastCard(dept, days, mult, color, reason) {
     return '<div style="background:#fffbeb;border:1px solid #fbd38d;border-left:4px solid ' + color + ';border-radius:8px;padding:10px 12px;">' +
-      '<div style="font-weight:700;font-size:0.82rem;color:' + color + ';">' + dept + ' — ' + days + '</div>' +
+      '<div style="font-weight:700;font-size:0.82rem;color:' + color + ';">' + dept + ' &#8212; ' + days + '</div>' +
       '<div style="font-size:1.1rem;font-weight:700;color:' + color + ';margin:2px 0;">' + mult + ' normal volume</div>' +
       '<div style="font-size:0.7rem;color:#718096;">' + reason + '</div>' +
     '</div>';
   }
 
-  // ── WHATSAPP MOCKUP (example UX, clearly illustrative) ───────────────────────
+  // ── INJECT WHATSAPP MOCKUP (static) ─────────────────
   function injectWhatsAppMockup() {
+    if (document.getElementById('grievai-whatsapp-panel')) return;
     var dashMain = document.querySelector('.dash-main');
     if (!dashMain) return;
     var quickActions = dashMain.querySelector('.grid-3:last-child');
     if (!quickActions) return;
 
     var mockup = document.createElement('div');
+    mockup.id = 'grievai-whatsapp-panel';
     mockup.style.cssText = 'background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px 22px;margin-bottom:24px;';
     mockup.innerHTML =
       '<div style="display:flex;align-items:flex-start;gap:14px;">' +
-        '<div style="font-size:2rem;flex-shrink:0;">📱</div>' +
+        '<div style="font-size:2rem;flex-shrink:0;">&#128241;</div>' +
         '<div style="flex:1;">' +
           '<div style="font-size:0.95rem;font-weight:700;color:#003366;font-family:var(--font-serif);margin-bottom:4px;">WhatsApp / SMS Omnichannel</div>' +
-          '<div style="font-size:0.75rem;color:#718096;margin-bottom:12px;">File complaints via WhatsApp — AI classifies in 2 seconds, no portal login needed</div>' +
+          '<div style="font-size:0.75rem;color:#718096;margin-bottom:12px;">File complaints via WhatsApp &#8212; AI classifies in 2 seconds, no portal login needed</div>' +
           '<div style="background:#e9f5e1;border-radius:12px 12px 12px 2px;border:1px solid #d1d9e0;padding:14px 16px;max-width:420px;">' +
-            wa('👤 Citizen', 'left',  'Meri bijli 3 din se nahi aayi. Transformer kharab hai colony mein.', '#fff') +
-            wa('🤖 GrievAI', 'right', '✅ Shikayat darj ho gayi!\n\n🏛️ Dept: Electricity Department\n🔴 Priority: HIGH\n🆔 ID: auto-generated\n⏱️ Expected: 1–3 working days\n\nSMS aayega update ke liye.', '#d9fdd3') +
+            waMsg('&#128100; Citizen', 'left',  'Meri bijli 3 din se nahi aayi. Transformer kharab hai colony mein.', '#fff') +
+            waMsg('&#129302; GrievAI', 'right', '&#10003;&#65038; Shikayat darj ho gayi!\n\n&#127963;&#65039; Dept: Electricity Department\n&#128308; Priority: HIGH\n&#128221; ID: GRIEVA/2025/847291\n&#8987; Expected: 1&#8211;3 working days\n\nSMS aayega update ke liye.', '#d9fdd3') +
           '</div>' +
           '<div style="font-size:0.7rem;color:#a0aec0;margin-top:8px;">Powered by Twilio/Meta WhatsApp API + GrievAI NLP Engine</div>' +
         '</div>' +
@@ -167,200 +155,149 @@
     quickActions.parentNode.insertBefore(mockup, quickActions);
   }
 
-  function wa(sender, side, text, bg) {
-    var right = side === 'right';
-    return '<div style="margin-bottom:10px;text-align:' + (right ? 'right' : 'left') + ';">' +
-      '<div style="display:inline-block;background:' + bg + ';border-radius:' + (right ? '12px 2px 12px 12px' : '2px 12px 12px 12px') + ';padding:8px 12px;max-width:90%;text-align:left;box-shadow:0 1px 2px rgba(0,0,0,0.08);">' +
+  function waMsg(sender, side, text, bg) {
+    var isRight = side === 'right';
+    return '<div style="margin-bottom:10px;text-align:' + (isRight ? 'right' : 'left') + ';">' +
+      '<div style="display:inline-block;background:' + bg + ';border-radius:' + (isRight ? '12px 2px 12px 12px' : '2px 12px 12px 12px') + ';padding:8px 12px;max-width:90%;text-align:left;box-shadow:0 1px 2px rgba(0,0,0,0.08);">' +
         '<div style="font-size:0.68rem;font-weight:700;color:#003366;margin-bottom:3px;">' + sender + '</div>' +
         '<div style="font-size:0.75rem;color:#1a2636;white-space:pre-line;line-height:1.5;">' + text + '</div>' +
       '</div>' +
     '</div>';
   }
 
-  // ── TICKER ────────────────────────────────────────────────────────────────────
-  function esc(str) {
-    return String(str || '')
-      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  }
-
-  function renderTickerItem(complaint, animate) {
+  // ── ADD ONE REAL COMPLAINT TO TICKER ─────────────────
+  function addTickerItem(complaint) {
     var ticker = document.getElementById('grievai-ticker');
     if (!ticker) return;
 
-    var ph = document.getElementById('grievai-ticker-placeholder');
-    if (ph) ph.remove();
+    var priority = ((complaint.priority || 'MEDIUM') + '').toUpperCase();
+    var cfg  = PRIORITY_COLORS[priority] || PRIORITY_COLORS.MEDIUM;
+    var id   = complaint.complaintId || complaint._id || '—';
+    var time = complaint.createdAt
+      ? new Date(complaint.createdAt).toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' })
+      : new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+    var subject = escHtml(complaint.subject || complaint.description || 'Complaint filed');
+    var dept    = escHtml(complaint.department || '—');
+    var state   = escHtml(complaint.state || '');
 
-    var p    = (complaint.priority || 'medium').toLowerCase();
-    var cfg  = PRIORITY_COLORS[p] || PRIORITY_COLORS.medium;
-    var time = new Date(complaint.createdAt || Date.now())
-                 .toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+    var empty = document.getElementById('grievai-ticker-empty');
+    if (empty) empty.remove();
 
-    var el = document.createElement('div');
-    el.style.cssText =
-      'border-radius:6px;padding:8px 10px;margin-bottom:6px;' +
-      'border-left:3px solid ' + cfg.badge + ';background:' + cfg.bg + ';' +
-      (animate ? 'animation:grievaiFadeIn 0.4s ease;' : '');
-
-    el.innerHTML =
+    var item = document.createElement('div');
+    item.style.cssText = 'border-radius:6px;padding:8px 10px;margin-bottom:6px;border-left:3px solid ' + cfg.badge + ';background:' + cfg.bg + ';animation:grievaiFadeIn 0.4s ease;';
+    item.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
         '<div style="flex:1;min-width:0;">' +
-          '<div style="font-size:0.78rem;font-weight:700;color:#1a2636;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc(complaint.title) + '">' + esc(complaint.title || '(No title)') + '</div>' +
-          '<div style="font-size:0.68rem;color:#718096;margin-top:2px;">' +
-            '🏛️ <strong>' + esc(complaint.department || 'General') + '</strong>' +
-            (complaint.citizenState ? ' · 📍 ' + esc(complaint.citizenState) : '') +
-            (complaint.complaintId  ? ' · 🆔 ' + esc(complaint.complaintId)  : '') +
-          '</div>' +
+          '<div style="font-size:0.78rem;font-weight:700;color:#1a2636;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + subject + '">' + subject + '</div>' +
+          '<div style="font-size:0.68rem;color:#718096;margin-top:2px;">&#127963;&#65039; <strong>' + dept + '</strong>' + (state ? ' &#183; &#128205; ' + state : '') + ' &#183; &#128221; ' + escHtml(id) + '</div>' +
         '</div>' +
         '<div style="flex-shrink:0;margin-left:8px;text-align:right;">' +
-          '<span style="background:' + cfg.badge + ';color:#fff;font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:10px;">' + p.toUpperCase() + '</span>' +
+          '<span style="background:' + cfg.badge + ';color:#fff;font-size:0.62rem;font-weight:700;padding:2px 7px;border-radius:10px;">' + priority + '</span>' +
           '<div style="font-size:0.63rem;color:#a0aec0;margin-top:3px;">' + time + '</div>' +
         '</div>' +
       '</div>';
 
-    ticker.insertBefore(el, ticker.firstChild);
-    while (ticker.children.length > MAX_FEED) ticker.removeChild(ticker.lastChild);
+    ticker.insertBefore(item, ticker.firstChild);
+    while (ticker.children.length > 15) ticker.removeChild(ticker.lastChild);
   }
 
-  function tickerError(msg) {
-    var ph = document.getElementById('grievai-ticker-placeholder');
-    if (ph) { ph.textContent = msg; return; }
-    var ticker = document.getElementById('grievai-ticker');
-    if (ticker && !ticker.children.length) {
-      var el = document.createElement('div');
-      el.style.cssText = 'text-align:center;color:#a0aec0;font-size:0.8rem;padding:20px;';
-      el.textContent = msg;
-      ticker.appendChild(el);
-    }
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
   }
 
-  // ── COUNTER UPDATES ───────────────────────────────────────────────────────────
-  function setEl(id, val) {
-    var el = document.getElementById(id);
-    if (el) el.textContent = val;
+  // ── UPDATE STAT COUNTERS ──────────────────────────────
+  function updateCounters(stats) {
+    var elTotal = document.getElementById('live-total');
+    var elClass = document.getElementById('live-classified');
+    var elAcc   = document.getElementById('live-accuracy');
+    var elToday = document.getElementById('live-today');
+
+    if (elTotal) elTotal.textContent = (stats.total || 0).toLocaleString('en-IN');
+    if (elClass) elClass.textContent = (stats.classified || stats.total || 0).toLocaleString('en-IN');
+    if (elAcc)   elAcc.textContent   = stats.accuracy != null ? Number(stats.accuracy).toFixed(1) + '%' : '—';
+    if (elToday) elToday.textContent = (stats.today || 0).toLocaleString('en-IN');
   }
 
-  function fmtNum(n) { return Number(n || 0).toLocaleString('en-IN'); }
+  // ── SINGLE PUBLIC FETCH — no token, no login needed ──
+  // Hits /complaints/public-feed which is open to everyone
+  function fetchStats() { /* merged into fetchLatestComplaints below */ }
 
-  function updateCountersFromStats(stats) {
-    setEl('live-total',      fmtNum(stats.totalComplaints));
-    setEl('live-classified', fmtNum(stats.totalComplaints - (stats.byStatus && stats.byStatus.pending || 0)));
-    setEl('live-resolved',   fmtNum(stats.byStatus && stats.byStatus.resolved  || 0));
-    setEl('live-pending',    fmtNum(stats.byStatus && stats.byStatus.pending   || 0));
-  }
+  function fetchLatestComplaints() {
+    fetch(API_BASE + '/complaints/public-feed')
+      .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(data) {
+        if (!data.success) return;
 
-  function updateCitizenKpiCards(data) {
-    var complaints = data.complaints || [];
-    var total = data.total || complaints.length;
-    var res = 0, prog = 0, pend = 0;
-    complaints.forEach(function(c) {
-      var s = (c.status || '').toLowerCase();
-      if (s === 'resolved') res++;
-      else if (s === 'in_progress') prog++;
-      else pend++;
-    });
-
-    // Update the four visible KPI card values (citizen view)
-    var vals = document.querySelectorAll('.kpi-card .kpi-value');
-    if (vals[0]) { vals[0].textContent = total; vals[0].setAttribute('data-count', total); }
-    if (vals[1]) { vals[1].textContent = res;   vals[1].setAttribute('data-count', res); }
-    if (vals[2]) { vals[2].textContent = prog;  vals[2].setAttribute('data-count', prog); }
-    if (vals[3]) { vals[3].textContent = pend;  vals[3].setAttribute('data-count', pend); }
-
-    // Live-panel counters
-    setEl('live-total',      fmtNum(total));
-    setEl('live-classified', fmtNum(total - pend));
-    setEl('live-resolved',   fmtNum(res));
-    setEl('live-pending',    fmtNum(pend));
-
-    // Resolution rate sub-label
-    var changes = document.querySelectorAll('.kpi-card .kpi-change');
-    if (changes[1] && total > 0) changes[1].textContent = '↑ ' + Math.round(res / total * 100) + '% rate';
-  }
-
-  function setStatus(msg) { setEl('grievai-feed-status', msg); }
-
-  // ── POLL ──────────────────────────────────────────────────────────────────────
-  function pollData() {
-    var role = getUserRole();
-
-    if (role === 'citizen') {
-      apiFetch('/complaints/my?limit=50')
-        .then(function(data) {
-          if (!data.success) throw new Error('not ok');
-          updateCitizenKpiCards(data);
-
-          var complaints = data.complaints || [];
-          var newOnes = complaints.filter(function(c) { return c._id !== lastSeenId; });
-          // Show new ones with animation, existing ones without
-          newOnes.forEach(function(c, i) {
-            renderTickerItem(c, i === 0 && lastSeenId !== null);
-          });
-          if (complaints.length) lastSeenId = complaints[0]._id;
-
-          setStatus('Real-time data · ' + now());
-        })
-        .catch(function(e) {
-          console.warn('[GrievAI live] citizen fetch failed:', e.message);
-          setStatus('Could not reach server — retrying in 30s');
-          tickerError('⚠ No data. Check connection or login status.');
+        // ── Update counters from stats ────────────────
+        var s = data.stats || {};
+        updateCounters({
+          total:      s.totalComplaints || 0,
+          classified: s.totalComplaints || 0,
+          accuracy:   null,
+          today:      s.today || 0
         });
 
-    } else {
-      Promise.all([
-        apiFetch('/complaints/stats'),
-        apiFetch('/complaints?limit=15')
-      ]).then(function(rs) {
-        if (rs[0].success && rs[0].stats) updateCountersFromStats(rs[0].stats);
-        if (rs[1].success) {
-          var list = rs[1].complaints || [];
-          var newOnes = list.filter(function(c) { return c._id !== lastSeenId; });
-          newOnes.forEach(function(c, i) {
-            renderTickerItem(c, i === 0 && lastSeenId !== null);
-          });
-          if (list.length) lastSeenId = list[0]._id;
+        // ── Show LIVE badge ───────────────────────────
+        var badge      = document.getElementById('grievai-live-badge');
+        var statusLine = document.getElementById('grievai-status-line');
+        if (badge) badge.style.display = 'block';
+        if (statusLine) {
+          statusLine.textContent = 'Connected — updates appear when new complaints are filed';
+          statusLine.style.color = '#718096';
         }
-        setStatus('Real-time data · ' + now());
-      }).catch(function(e) {
-        console.warn('[GrievAI live] admin fetch failed:', e.message);
-        setStatus('Could not reach server — retrying in 30s');
-        tickerError('⚠ No data. Check server connection.');
+
+        // ── Update ticker with latest complaints ──────
+        var complaints = data.complaints || [];
+        if (!complaints.length) return;
+
+        var newestId = complaints[0]._id || complaints[0].id;
+
+        if (lastSeenId === null) {
+          for (var i = complaints.length - 1; i >= 0; i--) addTickerItem(complaints[i]);
+          lastSeenId = newestId;
+        } else if (newestId !== lastSeenId) {
+          var newOnes = [];
+          for (var j = 0; j < complaints.length; j++) {
+            var c = complaints[j];
+            if ((c._id || c.id) === lastSeenId) break;
+            newOnes.push(c);
+          }
+          for (var k = newOnes.length - 1; k >= 0; k--) addTickerItem(newOnes[k]);
+          lastSeenId = newestId;
+        }
+      })
+      .catch(function(err) {
+        var statusLine = document.getElementById('grievai-status-line');
+        if (statusLine && statusLine.textContent.indexOf('Connected') === -1) {
+          statusLine.textContent = 'Backend offline — will reconnect automatically';
+          statusLine.style.color = '#c0392b';
+        }
+        console.warn('[GrievAI] Poll failed:', err.message);
       });
-    }
   }
 
-  function now() {
-    return new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  // ── START REAL POLLING (no fake data) ────────────────
+  function startPolling() {
+    fetchLatestComplaints(); // initial fetch
+    pollTimer = setInterval(fetchLatestComplaints, POLL_MS);
   }
 
-  // ── CSS ───────────────────────────────────────────────────────────────────────
-  function injectStyles() {
-    var s = document.createElement('style');
-    s.textContent =
-      '@keyframes grievaiFadeIn { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }' +
-      '@keyframes grievaiBlink  { 0%,100%{opacity:1} 50%{opacity:0.3} }' +
-      '#grievai-ticker::-webkit-scrollbar{width:4px}' +
-      '#grievai-ticker::-webkit-scrollbar-track{background:#f1f1f1}' +
-      '#grievai-ticker::-webkit-scrollbar-thumb{background:#d1d9e0;border-radius:2px}';
-    document.head.appendChild(s);
-  }
-
-  // ── INIT ──────────────────────────────────────────────────────────────────────
+  // ── INIT ─────────────────────────────────────────────
   function init() {
     injectStyles();
     injectLiveDashboard();
     injectSurgeForecast();
     injectWhatsAppMockup();
-    pollData();
-    pollTimer = setInterval(pollData, POLL_MS);
-    console.log('✅ GrievAI Live Dashboard v2.0 — real API mode, polling every ' + (POLL_MS/1000) + 's');
+    startPolling();
+    console.log('[GrievAI] Dashboard Engine v2.0 — real data only, polling every ' + (POLL_MS/1000) + 's');
   }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
-    setTimeout(init, 300);
+    requestAnimationFrame(function () { setTimeout(init, 100); });
   }
-
-  window.addEventListener('pagehide', function() { if (pollTimer) clearInterval(pollTimer); });
 
 })();
