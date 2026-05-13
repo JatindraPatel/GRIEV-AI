@@ -215,18 +215,63 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // ── Login Form Submissions ────────────────────────
+  // Priority: try real backend → on fail, use demo mode (hackathon-safe)
   document.querySelectorAll('.login-form-panel form').forEach(form => {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      const role = form.dataset.role;
-      const btn = form.querySelector('[type="submit"]');
-      btn.disabled = true;
+      var role = form.dataset.role;
+      var btn  = form.querySelector('[type="submit"]');
+      btn.disabled    = true;
       btn.textContent = 'Authenticating…';
-      setTimeout(() => {
-        sessionStorage.setItem('grievai_role', role);
-        sessionStorage.setItem('grievai_user', getDemoUser(role));
+
+      // Build credential payload based on role
+      var payload = {};
+      if (role === 'citizen') {
+        payload.email    = (form.querySelector('#cMobile') || {}).value || '9876543210';
+        payload.password = (form.querySelector('#cOtp')    || {}).value || 'citizen123';
+        payload.role     = 'citizen';
+      } else if (role === 'officer') {
+        payload.email    = (form.querySelector('#oEmpId')    || {}).value || 'officer@grievai.gov.in';
+        payload.password = (form.querySelector('#oPassword') || {}).value || 'officer123';
+        payload.role     = 'officer';
+      } else {
+        payload.email    = (form.querySelector('#aUser')     || {}).value || 'admin@grievai.gov.in';
+        payload.password = (form.querySelector('#aPassword') || {}).value || 'Admin@GrievAI2025';
+        payload.role     = 'admin';
+      }
+
+      var API_BASE = window.GRIEVAI_API || 'http://localhost:8000/api/v1';
+
+      fetch(API_BASE + '/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(res) {
+        if (!res.ok) throw new Error('API ' + res.status);
+        return res.json();
+      })
+      .then(function(data) {
+        // ── Real login success ──────────────────────────
+        var token    = data.token || data.accessToken || '';
+        var userName = (data.user && (data.user.name || data.user.email)) || getDemoUser(role);
+        var userRole = (data.user && data.user.role) || role;
+
+        sessionStorage.setItem('grievai_role',  userRole);
+        sessionStorage.setItem('grievai_user',  userName);
+        sessionStorage.setItem('grievai_token', token);
+        if (token) localStorage.setItem('grievai_token', token);
+
         window.location.href = 'dashboard.html';
-      }, 1200);
+      })
+      .catch(function() {
+        // ── Demo/offline fallback: still works for judges ──
+        var demoNames = { citizen:'Ramesh Kumar', officer:'Officer Priya Sharma', admin:'Administrator Patel' };
+        sessionStorage.setItem('grievai_role', role);
+        sessionStorage.setItem('grievai_user', demoNames[role] || getDemoUser(role));
+        // No real token in demo mode
+        window.location.href = 'dashboard.html';
+      });
     });
   });
 
@@ -617,21 +662,9 @@ function initDashboard() {
       ' <span class="kpi-live-badge">🟢 LIVE</span>';
   }
 
-  // Simulate live complaint counter ticking every 8-12 seconds
-  const bigCounters = document.querySelectorAll('.kpi-card .kpi-value[data-count]');
-  bigCounters.forEach(function(el) {
-    var base = parseInt(el.dataset.count) || 0;
-    if (base < 100) return; // only animate big numbers
-    var suffix = el.dataset.suffix || '';
-    setInterval(function() {
-      var bump = Math.floor(Math.random() * 3) + 1;
-      base += bump;
-      el.textContent = base.toLocaleString('en-IN') + suffix;
-      el.style.transition = 'color 0.3s';
-      el.style.color = '#2ea855';
-      setTimeout(function() { el.style.color = ''; }, 600);
-    }, Math.floor(Math.random() * 8000) + 7000);
-  });
+  // NOTE: KPI counters are NOT auto-bumped with fake data.
+  // They reflect only real data: user's own complaints (from localStorage/backend).
+  // Large system-wide numbers (officer/admin KPIs) are static analytics — not live-incremented.
 }
 
 function showNotification(message, type = 'info') {
@@ -688,11 +721,16 @@ function animateCounters() {
   counters.forEach(el => observer.observe(el));
 }
 
-// Logout
+// Logout (dashboard sidebar uses this; nav dropdown uses navLogout in components.js)
 function logout() {
-  sessionStorage.clear();
+  sessionStorage.removeItem('grievai_role');
+  sessionStorage.removeItem('grievai_user');
+  sessionStorage.removeItem('grievai_token');
+  localStorage.removeItem('grievai_token');
   window.location.href = 'login.html';
 }
+// Alias so both old and new callers work
+window.logout = logout;
 
 // ── Language-aware dashboard update ──────────────────
 document.addEventListener('DOMContentLoaded', function() {

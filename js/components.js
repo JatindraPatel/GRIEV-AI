@@ -52,34 +52,78 @@
   }
 
   // ── Build nav-right: Language dropdown + Login btn ──
+  // ── Auth helpers ──────────────────────────────────
+  function _getAuthState() {
+    var role  = sessionStorage.getItem('grievai_role')  || '';
+    var user  = sessionStorage.getItem('grievai_user')  || '';
+    var token = sessionStorage.getItem('grievai_token') || localStorage.getItem('grievai_token') || '';
+    return { role: role, user: user, token: token, loggedIn: !!(role && user) };
+  }
+  function _roleLabel(r) { return { citizen:'Citizen', officer:'Officer', admin:'Admin' }[r] || ''; }
+  function _roleIcon(r)  { return { citizen:'\u{1F464}', officer:'\u{1F3DB}\uFE0F', admin:'\u2699\uFE0F' }[r] || '\u{1F464}'; }
+  function _shortName(n) { return (n || 'User').split(' ')[0]; }
+
+  // Global logout callable from any page
+  window.navLogout = function() {
+    sessionStorage.removeItem('grievai_role');
+    sessionStorage.removeItem('grievai_user');
+    sessionStorage.removeItem('grievai_token');
+    localStorage.removeItem('grievai_token');
+    window.location.href = 'login.html';
+  };
+
+  // ── Build nav-right: Language dropdown + Auth button ──
   function buildNavRight() {
     var currentLang  = getSavedLang();
     var currentLabel = getLangLabel(currentLang);
+    var auth = _getAuthState();
 
     var langItems = CPGRAMS_LANGUAGES.map(function(l) {
-      return '<li class="cpgrams-lang-item' + (l.code === currentLang ? ' active' : '') +
-             '" data-code="' + l.code + '">' + l.label + '</li>';
+      return '<li class=\"cpgrams-lang-item' + (l.code === currentLang ? ' active' : '') +
+             '\" data-code=\"' + l.code + '\">' + l.label + '</li>';
     }).join('');
 
-    return (
-      '<div class="nav-right-group">' +
-        // Language dropdown
-        '<div class="nav-lang-wrap lang-desktop" id="cpgramsDropdown">' +
-          '<button class="nav-lang-btn" id="cpgramsDropBtn" aria-haspopup="listbox" aria-expanded="false">' +
-            '<span>🌐</span>' +
-            '<span id="cpgramsSelectedText">' + currentLabel + '</span>' +
-            '<span class="nav-lang-arrow">▾</span>' +
+    var authBtn;
+    if (auth.loggedIn) {
+      authBtn =
+        '<div class=\"nav-user-wrap\" id=\"navUserWrap\">' +
+          '<button class=\"nav-user-btn\" id=\"navUserBtn\">' +
+            '<span style=\"font-size:1rem;\">' + _roleIcon(auth.role) + '</span>' +
+            '<span style=\"margin-left:5px;font-weight:600;\">Hi, ' + _shortName(auth.user) + '</span>' +
+            '<span class=\"nav-lang-arrow\">\u25BE</span>' +
           '</button>' +
-          '<ul class="nav-lang-list" id="cpgramsDropList" role="listbox">' +
+          '<div class=\"nav-user-dropdown\" id=\"navUserDropdown\" style=\"display:none;\">' +
+            '<div class=\"nav-user-info\">' +
+              '<strong>' + auth.user + '</strong>' +
+              '<span class=\"nav-user-role-tag\">' + _roleLabel(auth.role) + '</span>' +
+            '</div>' +
+            '<a class=\"nav-user-dd-item\" href=\"dashboard.html\">\u{1F4CA} Dashboard</a>' +
+            '<a class=\"nav-user-dd-item\" href=\"track.html\">\u{1F50D} My Complaints</a>' +
+            '<hr style=\"margin:6px 0;border:none;border-top:1px solid #e2e8f0;\">' +
+            '<button class=\"nav-user-dd-item nav-user-logout\" onclick=\"navLogout()\">\u{1F6AA} Logout</button>' +
+          '</div>' +
+        '</div>';
+    } else {
+      authBtn =
+        '<a class=\"nav-signin-btn\" href=\"login.html\" id=\"cpgramsSignIn\">' +
+          '<span>\u2192</span> Login / Sign In' +
+        '</a>';
+    }
+
+    return (
+      '<div class=\"nav-right-group\">' +
+        '<div class=\"nav-lang-wrap lang-desktop\" id=\"cpgramsDropdown\">' +
+          '<button class=\"nav-lang-btn\" id=\"cpgramsDropBtn\" aria-haspopup=\"listbox\" aria-expanded=\"false\">' +
+            '<span>\u{1F310}</span>' +
+            '<span id=\"cpgramsSelectedText\">' + currentLabel + '</span>' +
+            '<span class=\"nav-lang-arrow\">\u25BE</span>' +
+          '</button>' +
+          '<ul class=\"nav-lang-list\" id=\"cpgramsDropList\" role=\"listbox\">' +
             langItems +
           '</ul>' +
         '</div>' +
-        // Divider
-        '<span class="nav-right-divider"></span>' +
-        // Login button
-        '<a class="nav-signin-btn" href="login.html" id="cpgramsSignIn">' +
-          '<span>➜</span> Login / Sign In' +
-        '</a>' +
+        '<span class=\"nav-right-divider\"></span>' +
+        authBtn +
       '</div>'
     );
   }
@@ -313,8 +357,27 @@
     initHamburger();
     setActiveNav();
     initCpgramsDropdown();
+    initNavUserDropdown();   // ← FIX: wire user dropdown toggle
 
     if (window.GrievLang) window.GrievLang.init();
   });
+
+  // ── User dropdown toggle ─────────────────────────
+  function initNavUserDropdown() {
+    var btn = document.getElementById('navUserBtn');
+    var dd  = document.getElementById('navUserDropdown');
+    if (!btn || !dd) return;
+
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var isOpen = dd.style.display !== 'none';
+      dd.style.display = isOpen ? 'none' : 'block';
+      btn.setAttribute('aria-expanded', String(!isOpen));
+    });
+
+    document.addEventListener('click', function() {
+      if (dd) dd.style.display = 'none';
+    });
+  }
 
 })();
