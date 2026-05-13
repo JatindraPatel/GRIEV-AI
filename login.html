@@ -227,10 +227,16 @@
     setTimeout(function() {
       sessionStorage.setItem('grievai_role', role);
       sessionStorage.setItem('grievai_user', role === 'citizen' ? 'Ramesh Kumar' : role === 'officer' ? 'Officer Priya Sharma' : 'Administrator');
-      window.location.href = 'dashboard.html';
+      // Citizens go to home page; officers/admins go to dashboard
+      if (role === 'citizen') {
+        window.location.href = 'index.html';
+      } else {
+        window.location.href = 'dashboard.html';
+      }
     }, 700);
   }
   </script>
+  <script src="js/auth_guard.js"></script>
   <script src="js/ai_department.js"></script>
   <script src="js/camera.js"></script>
   <script src="js/lang.js"></script>
