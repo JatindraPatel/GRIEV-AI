@@ -417,13 +417,33 @@
   <script src="js/grievai_dashboard_live.js"></script>
   <script src="js/chatbot.js"></script>
   <script>
-    // Set today's date
-    document.getElementById('dashDate').textContent = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    // Set avatar letter
-    const role = sessionStorage.getItem('grievai_role') || 'citizen';
-    const avatarMap = { citizen:'C', officer:'O', admin:'A' };
-    const avatarEl = document.getElementById('userAvatarLetter');
-    if (avatarEl) avatarEl.textContent = avatarMap[role] || 'U';
+    // ── Dashboard Bootstrap: read real session data ──────────────
+    var _role = sessionStorage.getItem('grievai_role') || 'citizen';
+    var _user = sessionStorage.getItem('grievai_user') || '';
+
+    // Date
+    document.getElementById('dashDate').textContent =
+      new Date().toLocaleDateString('en-IN', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+    // Avatar: first letter of real user name, fallback to role initial
+    var _avatarEl = document.getElementById('userAvatarLetter');
+    if (_avatarEl) _avatarEl.textContent = _user ? _user.charAt(0).toUpperCase() : ({citizen:'C',officer:'O',admin:'A'}[_role] || 'U');
+
+    // Sidebar user name and role
+    var _nameEl = document.getElementById('dashUserName');
+    var _roleEl = document.getElementById('dashUserRole');
+    if (_nameEl && _user) _nameEl.textContent = _user;
+    if (_roleEl) _roleEl.textContent = _role.charAt(0).toUpperCase() + _role.slice(1);
+
+    // Dashboard title
+    var _titleEl = document.getElementById('dashTitle');
+    if (_titleEl) _titleEl.textContent = ({citizen:'Citizen Dashboard',officer:'Officer Panel',admin:'Admin Panel'}[_role] || 'Dashboard');
+
+    // Role-based section visibility
+    document.querySelectorAll('[data-role]').forEach(function(el) {
+      var roles = el.dataset.role.split(',');
+      el.style.display = roles.includes(_role) ? '' : 'none';
+    });
   </script>
 
   <script>
