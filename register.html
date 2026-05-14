@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register | GrievAI – Government of India</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Serif:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/chatbot.css">
+  <link rel="stylesheet" href="css/grievai_patch.css">
+  <style>
+    .reg-step { display:none; }
+    .reg-step.active { display:block; }
+    .otp-inputs { display:flex; gap:10px; justify-content:center; margin:18px 0; }
+    .otp-inputs input { width:48px; height:56px; text-align:center; font-size:1.4rem; font-weight:700; border:2px solid #cbd5e0; border-radius:8px; font-family:monospace; letter-spacing:2px; transition:border-color 0.2s; }
+    .otp-inputs input:focus { outline:none; border-color:var(--navy,#003366); background:#f0f6ff; }
+    .otp-timer { font-size:0.82rem; color:var(--text-muted,#718096); text-align:center; margin-top:8px; }
+    .step-indicator { display:flex; align-items:center; justify-content:center; gap:0; margin-bottom:28px; }
+    .step-dot { width:32px; height:32px; border-radius:50%; background:var(--light-gray,#e8ecf0); display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:700; color:var(--text-muted,#718096); transition:all 0.3s; }
+    .step-dot.active { background:var(--navy,#003366); color:#fff; }
+    .step-dot.done { background:var(--success,#1a7a3f); color:#fff; }
+    .step-line { flex:1; height:3px; background:var(--light-gray,#e8ecf0); max-width:60px; transition:background 0.3s; }
+    .step-line.done { background:var(--success,#1a7a3f); }
+    .password-strength { height:4px; border-radius:2px; margin-top:6px; transition:all 0.3s; background:var(--light-gray,#e8ecf0); }
+    .strength-weak { background:#e53e3e; width:33%; }
+    .strength-medium { background:#e17a00; width:66%; }
+    .strength-strong { background:#1a7a3f; width:100%; }
+    .mobile-verified-badge { display:inline-flex; align-items:center; gap:6px; background:#e6f7ef; color:#1a7a3f; padding:5px 12px; border-radius:20px; font-size:0.82rem; font-weight:600; margin-bottom:14px; }
+  </style>
+</head>
+<body>
+  <div id="site-header-placeholder"></div>
+
+  <div class="breadcrumb-bar">
+    <div class="breadcrumb-inner">
+      <a href="index.html">🏠 Home</a>
+      <span class="sep">›</span>
+      <a href="login.html">Login</a>
+      <span class="sep">›</span>
+      <span>Register</span>
+    </div>
+  </div>
+
+  <div class="login-wrapper" style="padding:32px 16px;">
+    <div style="width:100%;max-width:520px;">
+
+      <div class="login-box">
+        <div class="login-header">
+          <div style="font-size:2.4rem;margin-bottom:8px;">📋</div>
+          <h2>Citizen Registration</h2>
+          <p>GrievAI – Government of India Grievance Portal</p>
+        </div>
+
+        <!-- Step Indicator -->
+        <div class="step-indicator" id="stepIndicator">
+          <div class="step-dot active" id="dot1">1</div>
+          <div class="step-line" id="line1"></div>
+          <div class="step-dot" id="dot2">2</div>
+          <div class="step-line" id="line2"></div>
+          <div class="step-dot" id="dot3">3</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text-muted);margin-bottom:22px;padding:0 6px;">
+          <span>Mobile Verify</span><span>OTP Confirm</span><span>Account Details</span>
+        </div>
+
+        <!-- STEP 1: Mobile Number -->
+        <div class="reg-step active" id="step1">
+          <div class="alert alert-info" style="margin-bottom:18px;">
+            <span>📱</span>
+            <span>Enter your <strong>10-digit mobile number</strong> to receive an OTP for verification. No registration without OTP verification.</span>
+          </div>
+          <div class="form-group">
+            <label for="regMobile">Mobile Number <span class="required">*</span></label>
+            <div style="display:flex;gap:10px;">
+              <span style="display:flex;align-items:center;background:#f7fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:0 14px;font-weight:600;color:var(--navy);white-space:nowrap;">🇮🇳 +91</span>
+              <input type="tel" id="regMobile" class="form-control" placeholder="10-digit mobile number" maxlength="10" style="flex:1;" required>
+            </div>
+            <span class="form-hint">Must be an active Indian mobile number</span>
+          </div>
+          <div id="step1Error" class="alert alert-error" style="display:none;margin-bottom:12px;"></div>
+          <button type="button" class="btn btn-primary btn-full" onclick="sendOTP()" id="sendOtpBtn">
+            📱 Send OTP via SMS
+          </button>
+          <p style="text-align:center;margin-top:18px;font-size:0.82rem;color:var(--text-muted);">
+            Already registered? <a href="login.html">Login here</a>
+          </p>
+        </div>
+
+        <!-- STEP 2: OTP Verification -->
+        <div class="reg-step" id="step2">
+          <p style="text-align:center;font-size:0.9rem;color:var(--text-secondary);margin-bottom:6px;">
+            OTP sent to <strong id="otpSentTo">+91 XXXXXXXXXX</strong>
+          </p>
+          <p style="text-align:center;font-size:0.82rem;color:var(--text-muted);margin-bottom:4px;">Enter the 6-digit OTP below:</p>
+          <div class="otp-inputs" id="otpInputs">
+            <input type="text" maxlength="1" class="otp-digit" data-index="0" autocomplete="off">
+            <input type="text" maxlength="1" class="otp-digit" data-index="1" autocomplete="off">
+            <input type="text" maxlength="1" class="otp-digit" data-index="2" autocomplete="off">
+            <input type="text" maxlength="1" class="otp-digit" data-index="3" autocomplete="off">
+            <input type="text" maxlength="1" class="otp-digit" data-index="4" autocomplete="off">
+            <input type="text" maxlength="1" class="otp-digit" data-index="5" autocomplete="off">
+          </div>
+          <div class="otp-timer" id="otpTimer">Resend OTP in <strong id="timerCount">60</strong>s</div>
+          <div id="step2Error" class="alert alert-error" style="display:none;margin-bottom:12px;"></div>
+          <button type="button" class="btn btn-primary btn-full" onclick="verifyOTP()" id="verifyOtpBtn" style="margin-top:16px;">
+            ✅ Verify OTP
+          </button>
+          <div style="display:flex;justify-content:space-between;margin-top:14px;font-size:0.82rem;">
+            <button type="button" onclick="goBackToStep1()" style="background:none;border:none;color:var(--navy);cursor:pointer;">← Change Number</button>
+            <button type="button" id="resendOtpBtn" onclick="resendOTP()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;" disabled>Resend OTP</button>
+          </div>
+          <!-- Demo hint -->
+          <div class="alert alert-info" style="margin-top:14px;font-size:0.8rem;">
+            <span>🎯</span>
+            <span><strong>Demo Mode:</strong> Use OTP <strong>123456</strong> for testing</span>
+          </div>
+        </div>
+
+        <!-- STEP 3: Account Details -->
+        <div class="reg-step" id="step3">
+          <div class="mobile-verified-badge">✅ Mobile Verified: <span id="verifiedMobile"></span></div>
+          <div id="step3Error" class="alert alert-error" style="display:none;margin-bottom:12px;"></div>
+          <form id="regForm" novalidate>
+            <div class="form-group">
+              <label for="regName">Full Name <span class="required">*</span></label>
+              <input type="text" id="regName" class="form-control" placeholder="As per Aadhaar card" required minlength="2">
+            </div>
+            <div class="form-group">
+              <label for="regEmail">Email Address <span class="required">*</span></label>
+              <input type="email" id="regEmail" class="form-control" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+              <label for="regState">State <span class="required">*</span></label>
+              <select id="regState" class="form-control" required>
+                <option value="">-- Select State --</option>
+                <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option>
+                <option>Bihar</option><option>Chhattisgarh</option><option>Goa</option>
+                <option>Gujarat</option><option>Haryana</option><option>Himachal Pradesh</option>
+                <option>Jharkhand</option><option>Karnataka</option><option>Kerala</option>
+                <option>Madhya Pradesh</option><option>Maharashtra</option><option>Manipur</option>
+                <option>Meghalaya</option><option>Mizoram</option><option>Nagaland</option>
+                <option>Odisha</option><option>Punjab</option><option>Rajasthan</option>
+                <option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option>
+                <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option>
+                <option>West Bengal</option><option>Delhi</option><option>Jammu & Kashmir</option>
+                <option>Ladakh</option><option>Puducherry</option><option>Chandigarh</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="regPassword">Create Password <span class="required">*</span></label>
+              <input type="password" id="regPassword" class="form-control" placeholder="Min 8 chars, mix of letters & numbers" required minlength="8" oninput="checkPasswordStrength(this.value)">
+              <div class="password-strength" id="pwStrengthBar"></div>
+              <span class="form-hint" id="pwStrengthLabel">Enter a strong password</span>
+            </div>
+            <div class="form-group">
+              <label for="regConfirm">Confirm Password <span class="required">*</span></label>
+              <input type="password" id="regConfirm" class="form-control" placeholder="Re-enter password" required>
+            </div>
+            <div class="form-group" style="display:flex;align-items:flex-start;gap:10px;">
+              <input type="checkbox" id="regTerms" style="margin-top:4px;flex-shrink:0;">
+              <label for="regTerms" style="font-size:0.83rem;font-weight:400;margin:0;">
+                I agree to the <a href="#">Terms & Conditions</a> and <a href="#">Privacy Policy</a> of the Government of India Grievance Portal.
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full" id="regSubmitBtn">
+              🎉 Create Account
+            </button>
+          </form>
+        </div>
+
+        <!-- SUCCESS STATE -->
+        <div class="reg-step" id="stepSuccess">
+          <div style="text-align:center;padding:20px 0;">
+            <div style="font-size:4rem;margin-bottom:16px;">🎉</div>
+            <h3 style="color:var(--success,#1a7a3f);margin-bottom:10px;">Registration Successful!</h3>
+            <p style="color:var(--text-secondary);margin-bottom:24px;">
+              Your GrievAI citizen account has been created. You can now login and file complaints.
+            </p>
+            <div style="background:#f0fff4;border:1.5px solid #9ae6b4;border-radius:8px;padding:16px;margin-bottom:24px;font-size:0.85rem;text-align:left;">
+              <strong>Account details sent to your mobile & email.</strong><br>
+              Keep your mobile number safe — it is linked to your complaints.
+            </div>
+            <a href="login.html" class="btn btn-primary btn-full">🔓 Login Now</a>
+          </div>
+        </div>
+
+        <div class="login-footer-note">
+          🔒 Your data is protected under India's Digital Personal Data Protection Act, 2023.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="site-footer-placeholder"></div>
+  <script src="js/auth_guard.js"></script>
+  <script src="js/ai_department.js"></script>
+  <script src="js/camera.js"></script>
+  <script src="js/lang.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/chatbot.js"></script>
+  <script src="js/grievai_patch.js"></script>
+  <script>
+  // ── Registration Flow JS ───────────────────────────
+  var currentStep = 1;
+  var verifiedMobile = '';
+  var otpTimerInterval = null;
+  var generatedOTP = ''; // In demo mode: shown; in prod: sent via SMS
+
+  var API_BASE = window.GRIEVAI_API || 'http://localhost:8000/api/v1';
+
+  function showStep(n) {
+    document.querySelectorAll('.reg-step').forEach(function(s) { s.classList.remove('active'); });
+    var el = document.getElementById('step' + (n === 'success' ? 'Success' : n));
+    if (el) el.classList.add('active');
+    // Update dots
+    [1,2,3].forEach(function(i) {
+      var dot = document.getElementById('dot' + i);
+      var line = document.getElementById('line' + i);
+      if (!dot) return;
+      dot.className = 'step-dot' + (i < n ? ' done' : i === n ? ' active' : '');
+      if (line) line.className = 'step-line' + (i < n ? ' done' : '');
+    });
+  }
+
+  function goBackToStep1() {
+    clearInterval(otpTimerInterval);
+    showStep(1);
+  }
+
+  function setError(stepN, msg) {
+    var el = document.getElementById('step' + stepN + 'Error');
+    if (!el) return;
+    el.innerHTML = '⚠️ ' + msg;
+    el.style.display = 'flex';
+  }
+  function clearError(stepN) {
+    var el = document.getElementById('step' + stepN + 'Error');
+    if (el) el.style.display = 'none';
+  }
+
+  // ── STEP 1: Send OTP ──────────────────────────────
+  function sendOTP() {
+    clearError(1);
+    var mob = document.getElementById('regMobile').value.trim();
+    if (!/^[6-9]\d{9}$/.test(mob)) {
+      setError(1, 'Enter a valid 10-digit Indian mobile number (starts with 6–9).');
+      return;
+    }
+    var btn = document.getElementById('sendOtpBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Sending OTP…';
+
+    // Demo: generate OTP locally (prod: call backend /auth/send-otp)
+    generatedOTP = '123456'; // Demo OTP always 123456
+    verifiedMobile = mob;
+
+    // Try real API
+    fetch(API_BASE + '/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobile: mob })
+    }).then(function(r) { return r.json(); })
+    .catch(function() { return { success: true, demo: true }; })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.textContent = '📱 Send OTP via SMS';
+      document.getElementById('otpSentTo').textContent = '+91 ' + mob.slice(0,2) + '****' + mob.slice(6);
+      showStep(2);
+      startOTPTimer();
+      setupOTPInputs();
+    });
+  }
+
+  // ── Timer ─────────────────────────────────────────
+  function startOTPTimer() {
+    var count = 60;
+    document.getElementById('timerCount').textContent = count;
+    document.getElementById('resendOtpBtn').disabled = true;
+    document.getElementById('resendOtpBtn').style.color = 'var(--text-muted)';
+    clearInterval(otpTimerInterval);
+    otpTimerInterval = setInterval(function() {
+      count--;
+      var el = document.getElementById('timerCount');
+      if (el) el.textContent = count;
+      if (count <= 0) {
+        clearInterval(otpTimerInterval);
+        var timerEl = document.getElementById('otpTimer');
+        if (timerEl) timerEl.textContent = 'OTP expired. Please resend.';
+        var resendBtn = document.getElementById('resendOtpBtn');
+        if (resendBtn) { resendBtn.disabled = false; resendBtn.style.color = 'var(--navy)'; }
+      }
+    }, 1000);
+  }
+
+  function resendOTP() {
+    goBackToStep1();
+    setTimeout(sendOTP, 300);
+  }
+
+  // ── OTP Inputs keyboard nav ───────────────────────
+  function setupOTPInputs() {
+    var inputs = document.querySelectorAll('.otp-digit');
+    inputs.forEach(function(inp) {
+      inp.value = '';
+      inp.addEventListener('input', function() {
+        var v = this.value.replace(/\D/g, '');
+        this.value = v ? v[0] : '';
+        var next = parseInt(this.dataset.index) + 1;
+        if (v && next < 6) inputs[next].focus();
+      });
+      inp.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' && !this.value) {
+          var prev = parseInt(this.dataset.index) - 1;
+          if (prev >= 0) inputs[prev].focus();
+        }
+      });
+      inp.addEventListener('paste', function(e) {
+        e.preventDefault();
+        var paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0,6);
+        paste.split('').forEach(function(ch, i) { if (inputs[i]) inputs[i].value = ch; });
+        if (inputs[paste.length - 1]) inputs[paste.length - 1].focus();
+      });
+    });
+    inputs[0].focus();
+  }
+
+  // ── STEP 2: Verify OTP ────────────────────────────
+  function verifyOTP() {
+    clearError(2);
+    var digits = document.querySelectorAll('.otp-digit');
+    var otp = Array.from(digits).map(function(d) { return d.value; }).join('');
+    if (otp.length !== 6) {
+      setError(2, 'Please enter all 6 digits of the OTP.');
+      return;
+    }
+
+    var btn = document.getElementById('verifyOtpBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Verifying…';
+
+    // Try real API, fallback to demo check
+    fetch(API_BASE + '/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mobile: verifiedMobile, otp: otp })
+    }).then(function(r) { return r.json(); })
+    .catch(function() {
+      // Demo fallback
+      return { success: otp === '123456', demo: true };
+    })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.textContent = '✅ Verify OTP';
+      if (data.success) {
+        clearInterval(otpTimerInterval);
+        document.getElementById('verifiedMobile').textContent = '+91 ' + verifiedMobile;
+        showStep(3);
+      } else {
+        setError(2, data.message || 'Invalid OTP. Please check and try again.');
+      }
+    });
+  }
+
+  // ── Password Strength ─────────────────────────────
+  function checkPasswordStrength(pwd) {
+    var bar = document.getElementById('pwStrengthBar');
+    var label = document.getElementById('pwStrengthLabel');
+    if (!bar) return;
+    var strong = /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(pwd) && pwd.length >= 10;
+    var medium = /(?=.*[a-zA-Z])(?=.*\d)/.test(pwd) && pwd.length >= 8;
+    if (strong) {
+      bar.className = 'password-strength strength-strong';
+      label.textContent = '✅ Strong password';
+      label.style.color = '#1a7a3f';
+    } else if (medium) {
+      bar.className = 'password-strength strength-medium';
+      label.textContent = '⚠️ Medium – add special characters';
+      label.style.color = '#e17a00';
+    } else if (pwd.length > 0) {
+      bar.className = 'password-strength strength-weak';
+      label.textContent = '❌ Weak – too short or too simple';
+      label.style.color = '#e53e3e';
+    } else {
+      bar.className = 'password-strength';
+      label.textContent = 'Enter a strong password';
+      label.style.color = '';
+    }
+  }
+
+  // ── STEP 3: Submit Registration ───────────────────
+  document.getElementById('regForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    clearError(3);
+    var name    = document.getElementById('regName').value.trim();
+    var email   = document.getElementById('regEmail').value.trim();
+    var state   = document.getElementById('regState').value;
+    var password= document.getElementById('regPassword').value;
+    var confirm = document.getElementById('regConfirm').value;
+    var terms   = document.getElementById('regTerms').checked;
+
+    if (!name || name.length < 2)   { setError(3, 'Full name is required (min 2 chars).'); return; }
+    if (!email || !/\S+@\S+\.\S+/.test(email)) { setError(3, 'Valid email address is required.'); return; }
+    if (!state)  { setError(3, 'Please select your state.'); return; }
+    if (password.length < 8)  { setError(3, 'Password must be at least 8 characters.'); return; }
+    if (password !== confirm) { setError(3, 'Passwords do not match.'); return; }
+    if (!terms)  { setError(3, 'You must accept the Terms & Conditions.'); return; }
+
+    var btn = document.getElementById('regSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Creating Account…';
+
+    // Call backend register API
+    fetch(API_BASE + '/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        email: email,
+        mobile: verifiedMobile,
+        password: password,
+        role: 'citizen',
+        state: state,
+        mobileVerified: true
+      })
+    }).then(function(r) { return r.json(); })
+    .catch(function() {
+      // Demo fallback
+      return { success: true, token: 'demo-token', user: { name: name, email: email, role: 'citizen' }, demo: true };
+    })
+    .then(function(data) {
+      btn.disabled = false;
+      btn.textContent = '🎉 Create Account';
+      if (data.success) {
+        // Auto-login after registration
+        if (data.token) {
+          sessionStorage.setItem('grievai_token', data.token);
+          sessionStorage.setItem('grievai_role', (data.user && data.user.role) || 'citizen');
+          sessionStorage.setItem('grievai_user', (data.user && data.user.name) || name);
+          localStorage.setItem('grievai_token', data.token);
+        }
+        showStep('success');
+      } else {
+        setError(3, data.message || 'Registration failed. Please try again.');
+      }
+    });
+  });
+  </script>
+</body>
+</html>
