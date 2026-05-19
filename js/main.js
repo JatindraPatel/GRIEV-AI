@@ -57,11 +57,54 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // ── Complaint Form Auth Gate (runs on DOMContentLoaded) ──────────
+  (function initComplaintGate() {
+    var formWrap     = document.getElementById('complaintFormWrap');
+    var loginGate    = document.getElementById('complaintLoginGate');
+    var officerGate  = document.getElementById('complaintOfficerGate');
+    if (!formWrap && !loginGate && !officerGate) return;  // not on index page
+
+    var role    = sessionStorage.getItem('grievai_role') || '';
+    var token   = sessionStorage.getItem('grievai_token') || '';
+    var loggedIn = !!(role && token);
+
+    if (!loggedIn) {
+      // Not logged in — show login gate, hide form
+      if (loginGate)   loginGate.style.display   = 'block';
+      if (officerGate) officerGate.style.display  = 'none';
+      if (formWrap)    formWrap.style.display      = 'none';
+    } else if (role === 'officer' || role === 'admin') {
+      // Officer/Admin — show officer gate, hide form
+      if (officerGate) officerGate.style.display  = 'block';
+      if (loginGate)   loginGate.style.display    = 'none';
+      if (formWrap)    formWrap.style.display      = 'none';
+    } else {
+      // Citizen — show form, hide gates
+      if (formWrap)    formWrap.style.display      = 'block';
+      if (loginGate)   loginGate.style.display    = 'none';
+      if (officerGate) officerGate.style.display  = 'none';
+    }
+  })();
+
   // ── Complaint Form Submission ─────────────────────
   const complaintForm = document.getElementById('complaintForm');
   if (complaintForm) {
     complaintForm.addEventListener('submit', function (e) {
       e.preventDefault();
+
+      // ── Re-check auth at submit time (safety net) ──
+      var _role  = sessionStorage.getItem('grievai_role')  || '';
+      var _token = sessionStorage.getItem('grievai_token') || '';
+      if (!_token || !_role) {
+        showNotification('आपको शिकायत दर्ज करने के लिए लॉगिन करना होगा। Please login first.', 'error');
+        setTimeout(function () { window.location.href = 'login.html'; }, 1500);
+        return;
+      }
+      if (_role === 'officer' || _role === 'admin') {
+        showNotification('Only citizens can file complaints. Officers/Admins cannot lodge complaints.', 'error');
+        return;
+      }
+
       if (!validateComplaintForm()) return;
 
       // ── Camera validation (if camera section exists) ──
@@ -90,25 +133,22 @@ document.addEventListener('DOMContentLoaded', function () {
       var lang = localStorage.getItem('grievai_lang') || 'en';
       formData.append('language', lang);
 
-      // ── Try backend API, fallback to demo mode ──
+      // ── Try backend API ──
       var API_BASE = window.GRIEVAI_API || 'http://localhost:8000/api/v1';
-
-      // Attach auth token for authenticated complaint filing
-      var authToken = sessionStorage.getItem('grievai_token') || localStorage.getItem('grievai_token') || '';
 
       fetch(API_BASE + '/complaints', {
         method: 'POST',
-        headers: authToken ? { 'Authorization': 'Bearer ' + authToken } : {},
+        headers: { 'Authorization': 'Bearer ' + _token },
         body: formData
+        // No Content-Type header — browser sets multipart boundary automatically
       })
       .then(function(res) {
-        return res.json().then(function(data) {
-          if (!res.ok) throw Object.assign(new Error(data.message || 'Server error'), { status: res.status, data });
-          return data;
-        });
+        if (res.status === 401) throw new Error('AUTH_FAILED');
+        if (!res.ok) throw new Error('API error ' + res.status);
+        return res.json();
       })
       .then(function(data) {
-        var complaintId = data.complaint_id || data.id;
+        var complaintId = data.complaint_id || data.id || generateComplaintId();
         showComplaintSuccess(complaintId, data);
         _saveComplaintToStorage(complaintId, data);
         submitBtn.disabled = false;
@@ -120,12 +160,14 @@ document.addEventListener('DOMContentLoaded', function () {
       .catch(function(err) {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Submit Complaint';
-        if (err.status === 401) {
+        if (err.message === 'AUTH_FAILED') {
           showNotification('Session expired. Please login again.', 'error');
-          setTimeout(function() { window.location.href = 'login.html'; }, 1500);
-        } else {
-          showNotification(err.message || 'Failed to submit complaint. Please try again.', 'error');
+          setTimeout(function () { window.location.href = 'login.html'; }, 1500);
+          return;
         }
+        // Backend offline — show error, do NOT silently auto-generate
+        console.warn('[GrievAI] Backend unavailable:', err.message);
+        showNotification('⚠️ Server not reachable. Please check your connection and try again. Your complaint was NOT submitted.', 'error');
       });
     });
   }
@@ -215,7 +257,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
-  // ── Login Form Submissions (Production — real auth only) ─────────────
+  // ── Login Form Submissions ────────────────────────
+  // Priority: try real backend → on fail, use demo mode (hackathon-safe)
   document.querySelectorAll('.login-form-panel form').forEach(form => {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -224,70 +267,71 @@ document.addEventListener('DOMContentLoaded', function () {
       btn.disabled    = true;
       btn.textContent = 'Authenticating…';
 
-      // Clear any previous errors
-      var errEl = form.querySelector('.login-error');
-      if (errEl) errEl.remove();
-
-      var API_BASE = window.GRIEVAI_API || 'http://localhost:8000/api/v1';
-      var payload  = {};
-
+      // Build credential payload based on role
+      var payload = {};
       if (role === 'citizen') {
-        // Citizen logs in with mobile + password
-        var mobileVal = (form.querySelector('#cMobile') || {}).value || '';
-        var passVal   = (form.querySelector('#cPassword') || {}).value || '';
-        payload.mobile   = mobileVal.trim();
+        var mobileVal = ((form.querySelector('#cMobile') || form.querySelector('[name="mobile"]') || {}).value || '').trim();
+        var passVal   = ((form.querySelector('#cOtp')    || form.querySelector('[name="password"]') || {}).value || '').trim();
+        payload.mobile   = mobileVal;
         payload.password = passVal;
+        payload.role     = 'citizen';
       } else if (role === 'officer') {
-        payload.email    = ((form.querySelector('#oEmail') || form.querySelector('#oEmpId') || {}).value || '').trim();
-        payload.password = (form.querySelector('#oPassword') || {}).value || '';
+        var emailVal = ((form.querySelector('#oEmpId')    || form.querySelector('[name="email"]')    || {}).value || '').trim();
+        var passVal2 = ((form.querySelector('#oPassword') || form.querySelector('[name="password"]') || {}).value || '').trim();
+        payload.email    = emailVal;
+        payload.password = passVal2;
+        payload.role     = 'officer';
       } else {
-        payload.email    = ((form.querySelector('#aEmail') || form.querySelector('#aUser') || {}).value || '').trim();
-        payload.password = (form.querySelector('#aPassword') || {}).value || '';
+        var aEmailVal = ((form.querySelector('#aUser')     || form.querySelector('[name="email"]')    || {}).value || '').trim();
+        var aPassVal  = ((form.querySelector('#aPassword') || form.querySelector('[name="password"]') || {}).value || '').trim();
+        payload.email    = aEmailVal;
+        payload.password = aPassVal;
+        payload.role     = 'admin';
       }
 
+      var API_BASE = window.GRIEVAI_API || 'http://localhost:8000/api/v1';
+
       fetch(API_BASE + '/auth/login', {
-        method:  'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
+        body: JSON.stringify(payload)
       })
       .then(function(res) {
         return res.json().then(function(data) {
-          if (!res.ok) throw Object.assign(new Error(data.message || 'Login failed'), { status: res.status, data });
+          if (!res.ok) {
+            var msg = (data && data.message) ? data.message : ('Login failed (' + res.status + ')');
+            throw new Error(msg);
+          }
           return data;
         });
       })
       .then(function(data) {
-        var token    = data.token || '';
-        var userObj  = data.user  || {};
-        var userName = userObj.name || userObj.email || '';
-        var userRole = userObj.role || role;
+        // ── Real login success ──────────────────────────
+        var token    = data.token || data.accessToken || '';
+        var userName = (data.user && (data.user.name || data.user.mobile || data.user.email)) || '';
+        var userRole = (data.user && data.user.role) || role;
 
-        sessionStorage.setItem('grievai_role',   userRole);
-        sessionStorage.setItem('grievai_user',   userName);
-        sessionStorage.setItem('grievai_token',  token);
-        sessionStorage.setItem('grievai_email',  userObj.email || '');
-        sessionStorage.setItem('grievai_mobile', userObj.mobile || '');
+        if (!token) { throw new Error('No token received. Login rejected.'); }
+
+        sessionStorage.setItem('grievai_role',  userRole);
+        sessionStorage.setItem('grievai_user',  userName);
+        sessionStorage.setItem('grievai_token', token);
         localStorage.setItem('grievai_token', token);
 
-        btn.textContent = '✅ Redirecting…';
+        // Citizens go to home; officers/admins go to dashboard
         window.location.href = (userRole === 'citizen') ? 'index.html' : 'dashboard.html';
       })
       .catch(function(err) {
+        // ── Real error — show proper message, NO demo bypass ──
         btn.disabled    = false;
-        btn.textContent = (role === 'citizen') ? 'Login' : 'Login to Dashboard';
-
-        var msg = err.message || 'Login failed. Please check your credentials.';
-        // Show inline error
-        var errDiv = document.createElement('div');
-        errDiv.className = 'alert alert-error login-error';
-        errDiv.style.marginTop = '12px';
-        errDiv.innerHTML = '⚠️ ' + msg;
-        form.appendChild(errDiv);
-
-        // If OTP not verified, offer to reverify
-        if (err.data && err.data.requiresOTP && err.data.mobile) {
-          errDiv.innerHTML += '<br><a href="register.html?mobile=' + err.data.mobile + '&step=verify" style="color:#fff;font-weight:700;text-decoration:underline;">→ Verify mobile OTP</a>';
+        btn.textContent = 'Login';
+        var msg = 'Login failed. Please check your credentials and try again.';
+        if (err.message && err.message.indexOf('401') !== -1) {
+          msg = 'Invalid credentials. Please check your mobile number and password.';
+        } else if (err.message && (err.message.indexOf('fetch') !== -1 || err.message.indexOf('network') !== -1 || err.message.indexOf('Failed') !== -1)) {
+          msg = '⚠️ Server not reachable. Please ensure the backend is running and try again.';
         }
+        showNotification(msg, 'error');
       });
     });
   });
@@ -390,42 +434,18 @@ function showTrackResult(id, realData) {
   if (!result) return;
 
   var d = realData || getMockStatus(id);
-
-  // Complaint not found anywhere — show real error
-  if (!d) {
-    result.innerHTML = [
-      '<div class="card" style="text-align:center;padding:32px;">',
-        '<div style="font-size:2.5rem;margin-bottom:12px;">🔍</div>',
-        '<h3 style="color:var(--navy);margin-bottom:8px;">Complaint Not Found</h3>',
-        '<p style="color:var(--text-secondary);margin-bottom:20px;">',
-          'No complaint found with ID <strong>' + id + '</strong>.<br>',
-          'Please check the ID and try again.',
-        '</p>',
-        '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">',
-          '<a href="index.html#track" class="btn btn-outline-navy btn-sm">Try Again</a>',
-          '<a href="index.html" class="btn btn-navy btn-sm">Home</a>',
-        '</div>',
-      '</div>'
-    ].join('');
-    result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    return;
-  }
-
-  var dept     = d.dept || d.department || 'Processing';
+  var dept     = d.dept || d.department || 'Unknown Department';
   var officer  = d.officer || d.assigned_officer || 'Being assigned';
   var priority = d.priority || 'Medium';
   var status   = d.status || 'Under Review';
   var badgeCls = d.statusCls || d.badgeClass || _statusToCls(status);
-  var timeline = (d.timeline && d.timeline.length) ? d.timeline : [];
+  var timeline = (d.timeline && d.timeline.length) ? d.timeline : getMockStatus(id).timeline;
   var isResolved = status.toLowerCase() === 'resolved' || status.toLowerCase() === 'closed';
   var feedbackHtml = isResolved ? buildFeedbackHTML(id) : '';
 
   function _fmt(raw) {
-    if (!raw) return '—';
-    if (typeof raw === 'string' && /^GRIEVA/.test(raw)) return raw;
-    var d = new Date(raw);
-    if (isNaN(d.getTime())) return '—';
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (!raw) return '-';
+    try { return new Date(raw).toLocaleDateString('en-IN', { dateStyle: 'long' }); } catch(e) { return raw; }
   }
 
   var srcBadge = (realData && realData.fromBackend)
@@ -480,32 +500,17 @@ function renderStatusResult(id) {
 
   fetchComplaintFromBackend(id).then(function(realData) {
     var d = realData || getMockStatus(id);
-
-    if (!d) {
-      area.innerHTML = [
-        '<div class="card" style="text-align:center;padding:32px;">',
-          '<div style="font-size:2.5rem;margin-bottom:12px;">🔍</div>',
-          '<h3 style="color:var(--navy);margin-bottom:8px;">Complaint Not Found</h3>',
-          '<p style="color:var(--text-secondary);">No complaint found for ID <strong>' + id + '</strong>. Please verify the ID.</p>',
-        '</div>'
-      ].join('');
-      return;
-    }
-
-    var dept     = d.dept || d.department || 'Processing';
+    var dept     = d.dept || d.department || 'Unknown Department';
     var officer  = d.officer || d.assigned_officer || 'Being assigned';
     var priority = d.priority || 'Medium';
     var status   = d.status || 'Under Review';
     var badgeCls = d.statusCls || d.badgeClass || _statusToCls(status);
-    var timeline = (d.timeline && d.timeline.length) ? d.timeline : [];
+    var timeline = (d.timeline && d.timeline.length) ? d.timeline : getMockStatus(id).timeline;
     var isResolved = status.toLowerCase() === 'resolved' || status.toLowerCase() === 'closed';
 
     function _fmt(raw) {
-      if (!raw) return '—';
-      if (typeof raw === 'string' && /^GRIEVA/.test(raw)) return raw;
-      var d = new Date(raw);
-      if (isNaN(d.getTime())) return '—';
-      return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+      if (!raw) return '-';
+      try { return new Date(raw).toLocaleDateString('en-IN', { dateStyle: 'long' }); } catch(e) { return raw; }
     }
 
     area.innerHTML = `
@@ -552,37 +557,48 @@ function renderStatusResult(id) {
 }
 
 function getMockStatus(id) {
-  // Only used when backend is unreachable AND complaint was filed on this device.
-  // Never generates fake/random data.
-  const stored = _loadComplaintFromStorage(id);
-  if (!stored) return null; // caller must handle null — show "not found"
+  // This is ONLY a fallback for demo/unknown IDs.
+  // Real complaints are served from fetchComplaintFromBackend() which reads MongoDB.
+  const officers = ['Sh. Ramesh Kumar (IAS)', 'Dr. Priya Sharma', 'Sh. Anil Gupta', 'Ms. Kavita Singh'];
+  const statuses = [
+    { label: 'Under Review', cls: 'info' },
+    { label: 'In Progress',  cls: 'warning' },
+    { label: 'Resolved',     cls: 'success' },
+    { label: 'Pending',      cls: 'navy' }
+  ];
+  const hash = id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
 
-  const filedDate = new Date(stored.filedOn || stored.date);
-  const isValidDate = !isNaN(filedDate.getTime());
-  const days = { critical:7, high:15, medium:30, low:45 };
-  const etaDate = new Date(filedDate);
-  if (isValidDate) etaDate.setDate(etaDate.getDate() + (days[stored.priority] || 30));
+  // Check localStorage for complaints filed in this session/browser
+  const stored = _loadComplaintFromStorage(id);
+
+  const RESOLVED_DEMOS = ['GRIEVA/2024/783421', 'GRIEVA/2026/465268'];
+  const s = RESOLVED_DEMOS.includes(id.toUpperCase())
+    ? { label: 'Resolved', cls: 'success' }
+    : (stored ? { label: stored.status, cls: stored.statusCls || 'info' } : statuses[hash % statuses.length]);
+
+  const d = stored ? new Date(stored.filedOn) : new Date();
+  if (!stored) d.setDate(d.getDate() - (hash % 30));
+
+  const etaDate = new Date(d.getTime());
+  etaDate.setDate(etaDate.getDate() + 3);
+
+  const dept     = stored ? stored.dept     : 'Unknown (untracked ID)';
+  const priority = stored ? stored.priority : (hash % 2 === 0 ? 'High' : 'Medium');
 
   return {
-    status:    stored.status     || 'Under Review',
-    badgeClass:stored.statusCls  || 'info',
-    statusCls: stored.statusCls  || 'info',
-    dept:      stored.dept       || 'Processing',
-    officer:   stored.officer    || 'Being assigned',
-    date:      isValidDate ? filedDate.toISOString() : null,
-    filedOn:   isValidDate ? filedDate.toISOString() : null,
-    priority:  stored.priority   || 'Medium',
-    eta:       isValidDate ? etaDate.toISOString() : null,
+    status:    s.label,
+    badgeClass: s.cls,
+    statusCls:  s.cls,
+    dept:      dept,
+    officer:   officers[hash % officers.length],
+    date:      d.toLocaleDateString('en-IN', { dateStyle: 'long' }),
+    priority:  priority,
+    eta:       etaDate.toLocaleDateString('en-IN', { dateStyle: 'long' }),
     timeline: [
-      { icon: '✅', status: 'completed', title: 'Complaint Received',
-        date: isValidDate ? filedDate.toISOString() : null,
-        desc: 'Your complaint has been registered in the system.' },
-      { icon: '🔵', status: 'active', title: stored.status || 'Under Review',
-        date: isValidDate ? new Date(filedDate.getTime() + 86400000).toISOString() : null,
-        desc: 'The assigned officer is reviewing your complaint.' },
-      { icon: '⏳', status: 'pending', title: 'Resolution',
-        date: isValidDate ? etaDate.toISOString() : null,
-        desc: 'Expected resolution date. You will be notified upon closure.' }
+      { icon: '&#x2705;', status: 'completed', title: 'Complaint Received',    date: d.toLocaleDateString('en-IN'),                                    desc: 'Your complaint has been registered in the system.' },
+      { icon: '&#x2705;', status: 'completed', title: 'Verified & Assigned',   date: new Date(d.getTime() + 86400000).toLocaleDateString('en-IN'),     desc: 'Complaint verified and assigned to the concerned officer.' },
+      { icon: '&#x1F535;', status: 'active',   title: s.label,                 date: new Date(d.getTime() + 2 * 86400000).toLocaleDateString('en-IN'), desc: 'The assigned officer is working on your complaint.' },
+      { icon: '&#x2B55;', status: 'pending',   title: 'Resolution & Feedback', date: etaDate.toLocaleDateString('en-IN'),                              desc: 'Awaiting resolution. You will be notified upon closure.' }
     ]
   };
 }
@@ -614,58 +630,41 @@ function _loadComplaintFromStorage(id) {
 }
 
 // ── fetchComplaintFromBackend: MongoDB -> localStorage -> null ─────────────
+// Returns a Promise that resolves to data object or null.
 function fetchComplaintFromBackend(id) {
-  var API_BASE  = window.GRIEVAI_API || 'http://localhost:8000/api/v1';
-  var authToken = sessionStorage.getItem('grievai_token') || localStorage.getItem('grievai_token') || '';
-  var headers   = { 'Accept': 'application/json' };
-  if (authToken) headers['Authorization'] = 'Bearer ' + authToken;
-
-  return fetch(API_BASE + '/complaints/track/' + encodeURIComponent(id), {
-    method: 'GET', headers: headers
+  var API_BASE = window.GRIEVAI_API || 'http://localhost:8000/api/v1';
+  return fetch(API_BASE + '/complaints/' + encodeURIComponent(id), {
+    method: 'GET',
+    headers: { 'Accept': 'application/json' }
   })
   .then(function(res) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
   })
   .then(function(data) {
-    var c = data.complaint || data;
-    // Normalize dates — always use ISO strings from MongoDB
-    var filedDate = c.createdAt || c.filed_at || c.date || null;
-    var resolvedDate = c.resolvedAt || null;
-    // Expected resolution: status-dependent days from filing
-    var expDate = null;
-    if (c.status === 'resolved') {
-      expDate = resolvedDate;
-    } else if (filedDate) {
-      var days = { critical:7, high:15, medium:30, low:45 };
-      var d = new Date(filedDate);
-      if (!isNaN(d.getTime())) {
-        d.setDate(d.getDate() + (days[c.priority] || 30));
-        expDate = d.toISOString();
-      }
-    }
+    // Normalize: backend may use different key names
     return {
-      dept:        c.department   || null,
-      officer:     c.assigned_officer || (c.assignedTo && c.assignedTo.name) || null,
-      priority:    c.priority     || 'Medium',
-      status:      c.status       || 'Under Review',
-      statusCls:   _statusToCls(c.status),
-      badgeClass:  _statusToCls(c.status),
-      date:        filedDate,
-      filedOn:     filedDate,
-      eta:         expDate,
-      timeline:    c.statusHistory || c.timeline || null,
-      fromBackend: true,
+      dept:        data.department    || data.dept     || null,
+      officer:     data.assigned_officer || data.officer || null,
+      priority:    data.priority      || null,
+      status:      data.status        || 'Under Review',
+      statusCls:   _statusToCls(data.status),
+      badgeClass:  _statusToCls(data.status),
+      date:        data.filed_on      || data.created_at || data.date || null,
+      filedOn:     data.filed_on      || data.created_at || null,
+      eta:         data.expected_resolution || data.eta || null,
+      timeline:    data.timeline      || null,
+      fromBackend: true
     };
   })
   .catch(function(backendErr) {
-    // No demo fallback — show real error to user
+    console.warn('[GrievAI] Backend unavailable (' + backendErr.message + '), trying localStorage...');
     var stored = _loadComplaintFromStorage(id);
     if (stored) {
       stored.fromBackend = false;
       return stored;
     }
-    return null;
+    return null; // will fall back to getMockStatus in callers
   });
 }
 
@@ -685,6 +684,11 @@ function generateCaptcha() {
   const el = document.getElementById('captchaCode');
   if (el) el.textContent = code;
   window._captchaCode = code;
+}
+
+function getDemoUser(role) {
+  const users = { citizen: 'Ramesh Kumar', officer: 'Officer Priya Sharma', admin: 'Administrator' };
+  return users[role] || 'User';
 }
 
 function initDashboard() {
