@@ -51,7 +51,7 @@
       <!-- Notice above box -->
       <div class="alert alert-info" style="margin-bottom:18px;">
         <span>ℹ️</span>
-        <span><strong>Login Required</strong> to file a complaint. Track existing complaints without login.</span>
+        <span><strong>No Login Required</strong> to file or track complaints. Login is only needed for Officers and Administrators.</span>
       </div>
 
       <div class="login-box">
@@ -71,18 +71,16 @@
         <!-- ─── Citizen Panel ─── -->
         <div class="login-form-panel" id="panel-citizen" style="display:block;">
           <div class="login-form-body">
-            <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:18px;">Login with your registered mobile number and password. OTP verification on mobile is required for first-time login.</p>
+            <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:18px;">Login with your Aadhaar-linked mobile number or registered email to access your complaint history and profile.</p>
             <form id="citizenForm" data-role="citizen" novalidate>
               <div class="form-group">
-                <label for="cMobile">Mobile Number <span class="required">*</span></label>
-                <div style="display:flex;gap:8px;">
-                  <span style="display:flex;align-items:center;background:#f7fafc;border:1.5px solid #e2e8f0;border-radius:6px;padding:0 12px;font-weight:600;color:var(--navy);white-space:nowrap;">🇮🇳 +91</span>
-                  <input type="tel" id="cMobile" class="form-control" placeholder="10-digit mobile number" maxlength="10" required style="flex:1;">
-                </div>
+                <label for="cMobile"><span data-i18n="form.mobile">Mobile Number</span> <span class="required">*</span></label>
+                <input type="text" id="cMobile" class="form-control" placeholder="10-digit mobile or email" required>
               </div>
               <div class="form-group">
-                <label for="cPassword">Password <span class="required">*</span></label>
-                <input type="password" id="cPassword" class="form-control" placeholder="Enter your password" required>
+                <label for="cOtp">OTP / Password <span class="required">*</span></label>
+                <input type="password" id="cOtp" class="form-control" placeholder="Enter OTP or password" required>
+                <span class="form-hint">Use demo password: <strong>citizen123</strong></span>
               </div>
               <div class="captcha-box">
                 <span class="captcha-text" id="captchaCode">AB3K9Z</span>
@@ -92,9 +90,13 @@
                 <label for="cCaptcha">Enter Captcha <span class="required">*</span></label>
                 <input type="text" id="cCaptcha" class="form-control" placeholder="Enter the code above" maxlength="6" style="letter-spacing:4px;font-weight:700;" required>
               </div>
-              <button type="submit" class="btn btn-primary btn-full">🔓 Login as Citizen</button>
+              <div class="form-group" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                <label style="margin:0;font-weight:400;"><input type="checkbox"> Remember me</label>
+                <a href="#" style="font-size:0.82rem;">Forgot Password?</a>
+              </div>
+              <button type="submit" class="btn btn-primary btn-full" data-i18n="login.btn.c">🔓 Login as Citizen</button>
               <p style="text-align:center;margin-top:14px;font-size:0.82rem;color:var(--text-muted);">
-                New citizen? <a href="register.html"><strong>Register with Mobile OTP →</strong></a>
+                <span data-i18n="login.tab.c">👤 Citizen</span> <a href="#">Register Now</a>
               </p>
             </form>
           </div>
@@ -109,16 +111,28 @@
             </div>
             <form id="officerForm" data-role="officer" novalidate>
               <div class="form-group">
-                <label for="oEmail">Official Email <span class="required">*</span></label>
-                <input type="email" id="oEmail" class="form-control" placeholder="officer@department.gov.in" required>
+                <label for="oEmpId">Employee ID <span class="required">*</span></label>
+                <input type="text" id="oEmpId" class="form-control" placeholder="e.g. IAS-2024-MH-001" required>
+              </div>
+              <div class="form-group">
+                <label for="oDept"><span data-i18n="form.dept">Department</span> <span class="required">*</span></label>
+                <select id="oDept" class="form-control" required>
+                  <option value="">-- Select Department --</option>
+                  <option>Ministry of Health &amp; Family Welfare</option>
+                  <option>Department of Education</option>
+                  <option>Transport Authority</option>
+                  <option>Police Department</option>
+                  <option>Municipal Corporation</option>
+                </select>
               </div>
               <div class="form-group">
                 <label for="oPassword">Password <span class="required">*</span></label>
                 <input type="password" id="oPassword" class="form-control" placeholder="Enter your secure password" required>
+                <span class="form-hint">Use demo password: <strong>officer123</strong></span>
               </div>
               <div class="captcha-box">
                 <span class="captcha-text" id="captchaCode2">XP5R2Q</span>
-                <button type="button" class="captcha-refresh" id="captchaRefresh2">🔄 Refresh</button>
+                <button type="button" class="captcha-refresh" onclick="document.getElementById('captchaCode2').textContent='MNXP71'">🔄 Refresh</button>
               </div>
               <div class="form-group">
                 <label for="oCaptcha">Enter Captcha <span class="required">*</span></label>
@@ -138,16 +152,22 @@
             </div>
             <form id="adminForm" data-role="admin" novalidate>
               <div class="form-group">
-                <label for="aEmail">Admin Email <span class="required">*</span></label>
-                <input type="email" id="aEmail" class="form-control" placeholder="admin@grievai.gov.in" required>
+                <label for="aUsername">Admin Username <span class="required">*</span></label>
+                <input type="text" id="aUsername" class="form-control" placeholder="Enter admin username" required>
               </div>
               <div class="form-group">
                 <label for="aPassword">Admin Password <span class="required">*</span></label>
                 <input type="password" id="aPassword" class="form-control" placeholder="Enter secure password" required>
+                <span class="form-hint">Use demo password: <strong>admin123</strong></span>
+              </div>
+              <div class="form-group">
+                <label for="a2fa">Two-Factor Authentication Code <span class="required">*</span></label>
+                <input type="text" id="a2fa" class="form-control" placeholder="6-digit 2FA code" maxlength="6" style="letter-spacing:4px;font-weight:700;" required>
+                <span class="form-hint">Enter any 6-digit code for demo</span>
               </div>
               <div class="captcha-box">
                 <span class="captcha-text" id="captchaCode3">ZL8KR4</span>
-                <button type="button" class="captcha-refresh" id="captchaRefresh3">🔄 Refresh</button>
+                <button type="button" class="captcha-refresh" onclick="document.getElementById('captchaCode3').textContent='QW3YT6'">🔄 Refresh</button>
               </div>
               <div class="form-group">
                 <label for="aCaptcha">Enter Captcha <span class="required">*</span></label>
@@ -166,7 +186,7 @@
 
       <!-- Quick Actions below box -->
       <div style="display:flex;justify-content:center;gap:16px;margin-top:20px;flex-wrap:wrap;">
-        <a href="register.html" class="btn btn-outline-navy btn-sm">📝 Register &amp; File Complaint</a>
+        <a href="index.html#lodge" class="btn btn-outline-navy btn-sm">📝 File Complaint (No Login)</a>
         <a href="track.html" class="btn btn-outline-navy btn-sm">🔍 Track Complaint</a>
         <a href="faq.html" class="btn btn-outline-navy btn-sm">❓ FAQ</a>
       </div>
@@ -174,7 +194,48 @@
   </div>
 
   <div id="site-footer-placeholder"></div>
-  
+  <script>
+  // FIX 5: One-click demo login
+  function demoLogin(role, user, pass) {
+    // Switch to correct tab
+    document.querySelectorAll('.login-tab').forEach(function(t) {
+      t.classList.remove('active');
+      if (t.dataset.role === role) t.classList.add('active');
+    });
+    document.querySelectorAll('.login-form-panel').forEach(function(p) { p.style.display = 'none'; });
+    var panel = document.getElementById('panel-' + role);
+    if (panel) panel.style.display = 'block';
+
+    // Fill in credentials
+    if (role === 'citizen') {
+      var m = document.getElementById('cMobile'); if(m) m.value = user;
+      var o = document.getElementById('cOtp');    if(o) o.value = pass;
+      var c = document.getElementById('cCaptcha'); if(c) { c.value = document.getElementById('captchaCode') ? document.getElementById('captchaCode').textContent : 'AB3K9Z'; }
+    } else if (role === 'officer') {
+      var ei = document.getElementById('oEmpId');    if(ei) ei.value = user;
+      var op = document.getElementById('oPassword'); if(op) op.value = pass;
+      var od = document.getElementById('oDept');     if(od) od.selectedIndex = 1;
+      var oc = document.getElementById('oCaptcha');  if(oc) oc.value = document.getElementById('captchaCode2') ? document.getElementById('captchaCode2').textContent : 'XP5R2Q';
+    } else {
+      var au = document.getElementById('aUsername'); if(au) au.value = user;
+      var ap = document.getElementById('aPassword'); if(ap) ap.value = pass;
+      var af = document.getElementById('a2fa');      if(af) af.value = '123456';
+      var ac = document.getElementById('aCaptcha');  if(ac) ac.value = document.getElementById('captchaCode3') ? document.getElementById('captchaCode3').textContent : 'ZL8KR4';
+    }
+
+    // Short delay then redirect
+    setTimeout(function() {
+      sessionStorage.setItem('grievai_role', role);
+      sessionStorage.setItem('grievai_user', role === 'citizen' ? 'Ramesh Kumar' : role === 'officer' ? 'Officer Priya Sharma' : 'Administrator');
+      // Citizens go to home page; officers/admins go to dashboard
+      if (role === 'citizen') {
+        window.location.href = 'index.html';
+      } else {
+        window.location.href = 'dashboard.html';
+      }
+    }, 700);
+  }
+  </script>
   <script src="js/auth_guard.js"></script>
   <script src="js/ai_department.js"></script>
   <script src="js/camera.js"></script>

@@ -116,27 +116,27 @@
         </div>
       </div>
 
-      <!-- KPI Cards (Live Data) -->
+      <!-- KPI Cards -->
       <div class="kpi-grid">
         <div class="kpi-card saffron">
-          <span class="kpi-value" id="liveKpiTotal" data-count="0">—</span>
+          <span class="kpi-value" data-count="12">12</span>
           <div class="kpi-label" data-i18n="dash.kpi.my">My Complaints</div>
-          <span class="kpi-change up" id="kpiTotalSub">Live count</span>
+          <span class="kpi-change up">↑ 2 this month</span>
         </div>
         <div class="kpi-card green">
-          <span class="kpi-value" id="liveKpiResolved" data-count="0">—</span>
+          <span class="kpi-value" data-count="9">9</span>
           <div class="kpi-label" data-i18n="dash.kpi.res">Resolved</div>
-          <span class="kpi-change up">✅ Completed</span>
+          <span class="kpi-change up">↑ 75% rate</span>
         </div>
         <div class="kpi-card blue">
-          <span class="kpi-value" id="liveKpiProgress" data-count="0">—</span>
+          <span class="kpi-value" data-count="2">2</span>
           <div class="kpi-label" data-i18n="dash.kpi.prog">In Progress</div>
-          <span class="kpi-change">🔄 Active</span>
+          <span class="kpi-change">Active</span>
         </div>
         <div class="kpi-card red">
-          <span class="kpi-value" id="liveKpiPending" data-count="0">—</span>
+          <span class="kpi-value" data-count="1">1</span>
           <div class="kpi-label" data-i18n="dash.kpi.pend">Pending Review</div>
-          <span class="kpi-change down">⏳ Awaiting action</span>
+          <span class="kpi-change down">Awaiting action</span>
         </div>
         <div class="kpi-card" data-role="officer,admin" style="display:none;">
           <span class="kpi-value" data-count="248563">2,48,563</span>
@@ -314,18 +314,68 @@
         </div>
       </div>
 
-      <!-- Officer/Admin Live Table injected by grievai_dashboard_live.js -->
-      <!-- Admin Stats & Management Panel -->
+      <!-- Officer/Admin View - Extra Table -->
+      <div class="card" data-role="officer,admin" style="margin-bottom:24px;display:none;">
+        <div class="card-header">
+          <h3>📂 Assigned Complaints (Officer View)</h3>
+          <span class="badge badge-info">24 Active</span>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Complaint ID</th>
+                <th>Citizen</th>
+                <th>Issue</th>
+                <th>Priority</th>
+                <th>Deadline</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>GRIEVA/2024/834521</td>
+                <td>Rajesh Kumar</td>
+                <td>Hospital bed not available</td>
+                <td><span class="badge badge-error">High</span></td>
+                <td>25 Apr 2024</td>
+                <td><span class="badge badge-info">In Progress</span></td>
+                <td><button class="btn btn-sm btn-success">Update</button></td>
+              </tr>
+              <tr>
+                <td>GRIEVA/2024/835620</td>
+                <td>Priya Sharma</td>
+                <td>Teacher misconduct report</td>
+                <td><span class="badge badge-warning">Medium</span></td>
+                <td>30 Apr 2024</td>
+                <td><span class="badge badge-warning">Under Review</span></td>
+                <td><button class="btn btn-sm btn-success">Update</button></td>
+              </tr>
+              <tr>
+                <td>GRIEVA/2024/840012</td>
+                <td>Anil Gupta</td>
+                <td>Road repair pending 6 months</td>
+                <td><span class="badge badge-navy">Low</span></td>
+                <td>05 May 2024</td>
+                <td><span class="badge badge-navy">Pending</span></td>
+                <td><button class="btn btn-sm btn-success">Update</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Admin Stats -->
       <div data-role="admin" style="display:none;">
         <div class="grid-3" style="gap:20px;margin-bottom:24px;">
           <div class="card" style="padding:20px;">
             <h4 style="color:var(--navy);margin-bottom:14px;font-family:var(--font-serif);">📌 Top Complaint States</h4>
-            <div style="display:flex;flex-direction:column;gap:10px;font-size:0.83rem;">
+            <div style="display:flex;flex-direction:column;gap:10px;">
               <div>Uttar Pradesh <div style="height:8px;background:var(--light-gray);border-radius:4px;margin-top:4px;"><div style="width:78%;height:100%;background:var(--navy);border-radius:4px;"></div></div></div>
               <div>Maharashtra <div style="height:8px;background:var(--light-gray);border-radius:4px;margin-top:4px;"><div style="width:62%;height:100%;background:var(--saffron);border-radius:4px;"></div></div></div>
               <div>Bihar <div style="height:8px;background:var(--light-gray);border-radius:4px;margin-top:4px;"><div style="width:54%;height:100%;background:var(--navy);border-radius:4px;"></div></div></div>
               <div>West Bengal <div style="height:8px;background:var(--light-gray);border-radius:4px;margin-top:4px;"><div style="width:41%;height:100%;background:var(--navy);border-radius:4px;"></div></div></div>
-              <div>Madhya Pradesh <div style="height:8px;background:var(--light-gray);border-radius:4px;margin-top:4px;"><div style="width:35%;height:100%;background:var(--saffron);border-radius:4px;"></div></div></div>
             </div>
           </div>
           <div class="card" style="padding:20px;">
@@ -335,8 +385,6 @@
               <li style="display:flex;justify-content:space-between;"><span>API Response</span><span class="badge badge-success">120ms</span></li>
               <li style="display:flex;justify-content:space-between;"><span>AI Accuracy</span><span class="badge badge-success">94.2%</span></li>
               <li style="display:flex;justify-content:space-between;"><span>DB Load</span><span class="badge badge-info">42%</span></li>
-              <li style="display:flex;justify-content:space-between;"><span>SMS Gateway</span><span class="badge badge-success">Operational</span></li>
-              <li style="display:flex;justify-content:space-between;"><span>OTP Service</span><span class="badge badge-success">Active</span></li>
             </ul>
           </div>
           <div class="card" style="padding:20px;">
@@ -344,103 +392,9 @@
             <ul style="font-size:0.82rem;display:flex;flex-direction:column;gap:8px;color:var(--text-secondary);">
               <li>⚠️ 234 complaints overdue escalation</li>
               <li>✅ NIC backup completed successfully</li>
-              <li>🔵 1,240 complaints AI-classified</li>
+              <li>🔵 New batch of 1,240 complaints AI-classified</li>
               <li>📧 SMS gateway operational</li>
-              <li>🆕 12 new citizen registrations today</li>
-              <li>🔐 3 failed admin login attempts blocked</li>
             </ul>
-          </div>
-        </div>
-
-        <!-- Admin: User Management Panel -->
-        <div class="card" style="margin-bottom:24px;">
-          <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-            <h3>👥 User Management</h3>
-            <button onclick="showCreateUserModal()" class="btn btn-primary btn-sm">➕ Create Officer/Admin</button>
-          </div>
-          <div style="overflow-x:auto;">
-            <table class="data-table" id="userMgmtTable">
-              <thead><tr>
-                <th>Name</th><th>Mobile</th><th>Role</th><th>Department</th><th>Registered</th><th>Status</th><th>Action</th>
-              </tr></thead>
-              <tbody id="userMgmtBody">
-                <tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">⏳ Loading users…</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Admin: Quick Stats Row -->
-        <div class="grid-4" style="gap:16px;margin-bottom:24px;" id="adminQuickStats">
-          <div class="card" style="padding:18px;text-align:center;">
-            <div style="font-size:1.8rem;font-weight:700;color:var(--navy);" id="totalUsersCount">—</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">Total Citizens</div>
-          </div>
-          <div class="card" style="padding:18px;text-align:center;">
-            <div style="font-size:1.8rem;font-weight:700;color:var(--saffron);" id="totalOfficersCount">—</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">Officers</div>
-          </div>
-          <div class="card" style="padding:18px;text-align:center;">
-            <div style="font-size:1.8rem;font-weight:700;color:var(--success,#1a7a3f);" id="mobileVerifiedCount">—</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">Mobile Verified</div>
-          </div>
-          <div class="card" style="padding:18px;text-align:center;">
-            <div style="font-size:1.8rem;font-weight:700;color:#6b46c1;" id="todayRegistrations">—</div>
-            <div style="font-size:0.8rem;color:var(--text-muted);">Today Registrations</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Create User Modal -->
-      <div id="createUserModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
-        <div style="background:#fff;border-radius:12px;padding:28px;max-width:480px;width:92%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-            <h3 style="margin:0;color:var(--navy);">➕ Create Officer / Admin</h3>
-            <button onclick="closeCreateUserModal()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text-muted);">✕</button>
-          </div>
-          <div class="form-group">
-            <label>Full Name <span class="required">*</span></label>
-            <input type="text" id="cuName" class="form-control" placeholder="Officer's full name">
-          </div>
-          <div class="form-group">
-            <label>Email <span class="required">*</span></label>
-            <input type="email" id="cuEmail" class="form-control" placeholder="officer@gov.in">
-          </div>
-          <div class="form-group">
-            <label>Mobile Number <span class="required">*</span></label>
-            <input type="tel" id="cuMobile" class="form-control" placeholder="10-digit mobile" maxlength="10">
-          </div>
-          <div class="form-group">
-            <label>Role <span class="required">*</span></label>
-            <select id="cuRole" class="form-control" onchange="toggleOfficerFields()">
-              <option value="officer">Officer</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          <div id="officerFields">
-            <div class="form-group">
-              <label>Employee ID <span class="required">*</span></label>
-              <input type="text" id="cuEmpId" class="form-control" placeholder="e.g. IAS-2026-DL-001">
-            </div>
-            <div class="form-group">
-              <label>Department <span class="required">*</span></label>
-              <select id="cuDept" class="form-control">
-                <option value="">-- Select Department --</option>
-                <option>Municipal Corporation</option><option>Department of Education</option>
-                <option>Ministry of Health & Family Welfare</option><option>Transport Authority</option>
-                <option>Police Department</option><option>Water Supply & Sanitation</option>
-                <option>Revenue Department</option><option>Public Distribution System</option>
-              </select>
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Temporary Password <span class="required">*</span></label>
-            <input type="password" id="cuPassword" class="form-control" placeholder="Min 8 characters">
-          </div>
-          <div id="cuError" class="alert alert-error" style="display:none;margin-bottom:12px;"></div>
-          <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
-            <button onclick="closeCreateUserModal()" class="btn btn-outline-navy">Cancel</button>
-            <button onclick="submitCreateUser()" class="btn btn-primary" id="cuSubmitBtn">✅ Create Account</button>
           </div>
         </div>
       </div>
@@ -698,235 +652,5 @@
   </script>
 
   <script src="js/grievai_patch.js"></script>
-  <script>
-  // ── Admin: User Management ────────────────────────────────
-  var API_BASE = window.GRIEVAI_API || 'http://localhost:8000/api/v1';
-  var _authHeaders = function() {
-    var t = sessionStorage.getItem('grievai_token') || localStorage.getItem('grievai_token') || '';
-    return { 'Content-Type':'application/json', 'Authorization':'Bearer ' + t };
-  };
-
-  function loadUserManagement() {
-    var role = sessionStorage.getItem('grievai_role') || '';
-    if (role !== 'admin') return;
-    var tbody = document.getElementById('userMgmtBody');
-    if (!tbody) return;
-
-    fetch(API_BASE + '/auth/users?limit=20', { headers: _authHeaders() })
-      .then(function(r){ return r.json(); })
-      .then(function(data) {
-        var users = data.users || [];
-        // Update stats
-        var citizens  = users.filter(function(u){ return u.role === 'citizen'; });
-        var officers  = users.filter(function(u){ return u.role === 'officer'; });
-        var verified  = users.filter(function(u){ return u.mobileVerified; });
-        var today     = new Date().toDateString();
-        var todayRegs = users.filter(function(u){ return new Date(u.createdAt).toDateString() === today; });
-
-        var setEl = function(id, v) { var el = document.getElementById(id); if(el) el.textContent = v; };
-        setEl('totalUsersCount',    citizens.length);
-        setEl('totalOfficersCount', officers.length);
-        setEl('mobileVerifiedCount',verified.length);
-        setEl('todayRegistrations', todayRegs.length);
-
-        if (!users.length) {
-          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">No users found.</td></tr>';
-          return;
-        }
-        tbody.innerHTML = users.map(function(u) {
-          var createdAt = new Date(u.createdAt);
-          var dateStr   = isNaN(createdAt.getTime()) ? '—' :
-            createdAt.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
-          var mobile    = u.mobile ? u.mobile.slice(0,2) + '****' + u.mobile.slice(-2) : '—';
-          var verified  = u.mobileVerified
-            ? '<span class="badge badge-success">✅ Verified</span>'
-            : '<span class="badge badge-error">❌ Unverified</span>';
-          var status    = u.isActive
-            ? '<span class="badge badge-success">Active</span>'
-            : '<span class="badge badge-error">Inactive</span>';
-          var roleBadge = { citizen:'badge-navy', officer:'badge-info', admin:'badge-warning' }[u.role] || 'badge-navy';
-          return '<tr>' +
-            '<td><strong>' + (u.name || '—') + '</strong><br><span style="font-size:0.75rem;color:var(--text-muted);">' + (u.email || '') + '</span></td>' +
-            '<td style="font-size:0.82rem;">' + mobile + (u.mobileVerified ? '' : ' ⚠️') + '</td>' +
-            '<td><span class="badge ' + roleBadge + '">' + u.role + '</span></td>' +
-            '<td style="font-size:0.78rem;">' + (u.department || '—') + '</td>' +
-            '<td style="font-size:0.78rem;">' + dateStr + '</td>' +
-            '<td>' + status + '</td>' +
-            '<td>' +
-              (u.role !== 'admin' ?
-                '<button onclick="toggleUser(\'' + u._id + '\', ' + u.isActive + ')" class="btn btn-outline-navy btn-sm" style="font-size:0.75rem;padding:3px 8px;">' +
-                (u.isActive ? '🚫 Deactivate' : '✅ Activate') + '</button>'
-              : '<span style="font-size:0.75rem;color:var(--text-muted);">Protected</span>') +
-            '</td>' +
-          '</tr>';
-        }).join('');
-      })
-      .catch(function() {
-        if (tbody) tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">Could not load users. Check backend connection.</td></tr>';
-      });
-  }
-
-  function toggleUser(userId, currentlyActive) {
-    if (!confirm('Are you sure you want to ' + (currentlyActive ? 'deactivate' : 'activate') + ' this user?')) return;
-    fetch(API_BASE + '/auth/users/' + userId + '/toggle', {
-      method: 'PATCH',
-      headers: _authHeaders()
-    }).then(function(r){ return r.json(); })
-    .then(function(data) {
-      if (data.success) { loadUserManagement(); showNotification(data.message, 'success'); }
-      else showNotification(data.message || 'Failed to update user.', 'error');
-    }).catch(function(){ showNotification('Server error. Try again.', 'error'); });
-  }
-
-  function showCreateUserModal() {
-    var m = document.getElementById('createUserModal');
-    if (m) m.style.display = 'flex';
-  }
-
-  function closeCreateUserModal() {
-    var m = document.getElementById('createUserModal');
-    if (m) m.style.display = 'none';
-    // Clear form
-    ['cuName','cuEmail','cuMobile','cuEmpId','cuPassword'].forEach(function(id) {
-      var el = document.getElementById(id); if(el) el.value = '';
-    });
-    var cuRole = document.getElementById('cuRole');
-    if (cuRole) cuRole.value = 'officer';
-    toggleOfficerFields();
-    var err = document.getElementById('cuError');
-    if (err) err.style.display = 'none';
-  }
-
-  function toggleOfficerFields() {
-    var role = (document.getElementById('cuRole') || {}).value;
-    var fields = document.getElementById('officerFields');
-    if (fields) fields.style.display = (role === 'officer') ? '' : 'none';
-  }
-
-  // Create user by admin: requires sending OTP to officer mobile first
-  var _adminCreateStep = 1; // 1=form, 2=otp
-  var _adminCreateMobile = '';
-  var _adminCreateVerifiedToken = '';
-
-  function submitCreateUser() {
-    var cuErr = document.getElementById('cuError');
-    var showErr = function(msg) {
-      cuErr.innerHTML = '⚠️ ' + msg;
-      cuErr.style.display = 'flex';
-    };
-    cuErr.style.display = 'none';
-
-    var name   = (document.getElementById('cuName') || {}).value || '';
-    var email  = (document.getElementById('cuEmail') || {}).value || '';
-    var mobile = (document.getElementById('cuMobile') || {}).value || '';
-    var role   = (document.getElementById('cuRole') || {}).value || 'officer';
-    var empId  = (document.getElementById('cuEmpId') || {}).value || '';
-    var dept   = (document.getElementById('cuDept') || {}).value || '';
-    var pass   = (document.getElementById('cuPassword') || {}).value || '';
-
-    if (!name || !email || !mobile || !pass) { showErr('All required fields must be filled.'); return; }
-    if (!/^[6-9]\d{9}$/.test(mobile)) { showErr('Enter a valid 10-digit mobile number.'); return; }
-    if (pass.length < 8) { showErr('Password must be at least 8 characters.'); return; }
-
-    if (_adminCreateStep === 1) {
-      // Step 1: send OTP to officer mobile
-      var btn = document.getElementById('cuSubmitBtn');
-      btn.disabled = true;
-      btn.textContent = '⏳ Sending OTP…';
-
-      fetch(API_BASE + '/auth/send-otp', {
-        method: 'POST',
-        headers: _authHeaders(),
-        body: JSON.stringify({ mobile: mobile })
-      }).then(function(r){ return r.json(); })
-      .then(function(data) {
-        if (data.success) {
-          _adminCreateStep  = 2;
-          _adminCreateMobile = mobile;
-          btn.disabled = false;
-          btn.textContent = '✅ Verify OTP & Create';
-          // Add OTP input to modal
-          var otpRow = document.getElementById('adminOtpRow');
-          if (!otpRow) {
-            otpRow = document.createElement('div');
-            otpRow.id = 'adminOtpRow';
-            otpRow.className = 'form-group';
-            otpRow.innerHTML = '<label>OTP sent to +91' + mobile.slice(0,2) + '****' + mobile.slice(-2) + ' <span class="required">*</span></label>' +
-              '<input type="text" id="adminOtpInput" class="form-control" placeholder="Enter 6-digit OTP" maxlength="6" style="letter-spacing:4px;font-weight:700;">';
-            cuErr.parentElement.insertBefore(otpRow, cuErr);
-          }
-          showNotification('OTP sent to officer\'s mobile. Enter it below.', 'success');
-        } else {
-          btn.disabled = false;
-          btn.textContent = '✅ Create Account';
-          showErr(data.message || 'Failed to send OTP.');
-        }
-      }).catch(function() {
-        btn.disabled = false;
-        btn.textContent = '✅ Create Account';
-        showErr('Server error sending OTP.');
-      });
-
-    } else {
-      // Step 2: verify OTP then create user
-      var otp = (document.getElementById('adminOtpInput') || {}).value || '';
-      if (otp.length !== 6) { showErr('Enter the 6-digit OTP sent to officer\'s mobile.'); return; }
-
-      var btn = document.getElementById('cuSubmitBtn');
-      btn.disabled = true;
-      btn.textContent = '⏳ Verifying OTP…';
-
-      fetch(API_BASE + '/auth/verify-otp', {
-        method: 'POST',
-        headers: _authHeaders(),
-        body: JSON.stringify({ mobile: _adminCreateMobile, otp: otp })
-      }).then(function(r){ return r.json(); })
-      .then(function(vData) {
-        if (!vData.success) {
-          btn.disabled = false;
-          btn.textContent = '✅ Verify OTP & Create';
-          showErr(vData.message || 'Invalid OTP.');
-          return;
-        }
-        // OTP verified — now create user
-        btn.textContent = '⏳ Creating account…';
-        return fetch(API_BASE + '/auth/create-user', {
-          method: 'POST',
-          headers: _authHeaders(),
-          body: JSON.stringify({
-            name: name, email: email, mobile: _adminCreateMobile,
-            password: pass, role: role,
-            employeeId: empId, department: dept,
-            mobile_verified_token: vData.mobile_verified_token
-          })
-        }).then(function(r){ return r.json(); });
-      })
-      .then(function(data) {
-        if (!data) return;
-        btn.disabled = false;
-        btn.textContent = '✅ Create Account';
-        if (data.success) {
-          closeCreateUserModal();
-          _adminCreateStep = 1;
-          loadUserManagement();
-          showNotification(data.message || 'User created successfully.', 'success');
-        } else {
-          showErr(data.message || 'Failed to create user.');
-        }
-      }).catch(function() {
-        btn.disabled = false;
-        btn.textContent = '✅ Verify OTP & Create';
-        showErr('Server error. Please try again.');
-      });
-    }
-  }
-
-  // Init user management on DOMContentLoaded
-  document.addEventListener('DOMContentLoaded', function() {
-    loadUserManagement();
-    // Refresh user list every 60s
-    setInterval(loadUserManagement, 60000);
-  });
-  </script>
 </body>
 </html>
