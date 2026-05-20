@@ -545,6 +545,7 @@
   <script src="js/camera.js"></script>
   <script src="js/lang.js"></script>
   <script src="js/components.js"></script>
+  <script src="js/grievai_data.js"></script>
   <script src="js/main.js"></script>
   <script src="js/chatbot.js"></script>
   <script src="js/grievai_patch.js"></script>
@@ -618,30 +619,37 @@
     var container = document.getElementById('complaintFeedbackContainer');
     if (!container) return;
 
-    // Check if citizen or guest
-    var role  = sessionStorage.getItem('grievai_role') || '';
-    var user  = sessionStorage.getItem('grievai_user') || '';
-    var loggedIn = !!(role && user);
-
-    // Pull complaint IDs from sessionStorage (filed in this session)
-    var storedIds = [];
+    // Load real complaints from localStorage
+    var allComplaints = [];
     try {
-      var raw = sessionStorage.getItem('grievai_complaints');
-      if (raw) storedIds = JSON.parse(raw);
+      var list = JSON.parse(localStorage.getItem('grievai_complaint_list') || '[]');
+      list.forEach(function(id) {
+        var raw = localStorage.getItem('grievai_complaint_' + id) || localStorage.getItem('grievai_complaint_' + id.toUpperCase());
+        if (raw) {
+          var c = JSON.parse(raw);
+          allComplaints.push({
+            id: c.id || c.complaint_id || id,
+            title: c.subject || 'Grievance',
+            dept: c.department || 'Unknown',
+            date: (c.filed_on || c.created_at || '').slice(0,10),
+            status: (c.status || 'submitted').toLowerCase().replace(' ', '-')
+          });
+        }
+      });
     } catch(e) {}
 
-    // Demo complaints for display
+    // Always include demo complaints for display
     var DEMO_COMPLAINTS = [
-      { id: 'GRIEVA/2026/112901', title: 'Water supply disruption in Ward 5', dept: 'Municipal Corporation', date: '2026-04-28', status: 'resolved' },
-      { id: 'GRIEVA/2026/109654', title: 'Street light not working on MG Road', dept: 'Electricity Department', date: '2026-04-20', status: 'resolved' },
-      { id: 'GRIEVA/2026/105320', title: 'Pothole on main road near railway station', dept: 'Transport Authority', date: '2026-04-10', status: 'in-progress' }
+      { id: 'GRV2025DEMO001', title: 'Road pothole causing accidents near bus stop', dept: 'Transport Authority', date: '2025-05-18', status: 'in-progress' },
+      { id: 'GRV2025DEMO003', title: 'Street lights not working in residential colony', dept: 'Power Department', date: '2025-05-15', status: 'resolved' },
+      { id: 'GRV2025DEMO008', title: 'Water logging issue during rains not resolved', dept: 'Municipal Corporation', date: '2025-05-10', status: 'resolved' }
     ];
+    // Merge, avoiding duplicates
+    DEMO_COMPLAINTS.forEach(function(d) {
+      if (!allComplaints.find(function(c){ return c.id === d.id; })) allComplaints.push(d);
+    });
 
-    var allComplaints = DEMO_COMPLAINTS;
-
-    if (!loggedIn) {
-      container.innerHTML = '<div class="citizen-notice">⚠️ <span>Please <a href="login.html">login</a> to see and rate your complaints. You can still rate the portal and submit suggestions.</span></div>' + buildNoComplaintsHTML();
-      return;
+    if (false) { // removed login gate — feedback page is public
     }
 
     // Filter: only show resolved complaints for feedback
@@ -676,7 +684,7 @@
   }
 
   function buildComplaintFeedbackCard(complaint) {
-    var stored = sessionStorage.getItem('cfb_' + complaint.id);
+    var stored = localStorage.getItem('cfb_' + complaint.id);
     var statusClass = complaint.status === 'resolved' ? 'resolved' : complaint.status === 'in-progress' ? 'in-progress' : 'pending';
     var statusLabel = complaint.status === 'resolved' ? '✅ Resolved' : complaint.status === 'in-progress' ? '⏳ In Progress' : '🕐 Pending';
 
@@ -785,7 +793,7 @@
 
     setTimeout(function() {
       var data = { rating: rating, label: cfbLabels[rating].replace(/\s[^\s]+$/, ''), tags: tags, comment: comment };
-      sessionStorage.setItem('cfb_' + complaintId, JSON.stringify(data));
+      localStorage.setItem('cfb_' + complaintId, JSON.stringify(data));
       // Re-render card
       var card = document.getElementById('fbcard_' + safeId);
       if (card) {

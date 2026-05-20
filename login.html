@@ -96,7 +96,7 @@
               </div>
               <button type="submit" class="btn btn-primary btn-full" data-i18n="login.btn.c">🔓 Login as Citizen</button>
               <p style="text-align:center;margin-top:14px;font-size:0.82rem;color:var(--text-muted);">
-                <span data-i18n="login.tab.c">👤 Citizen</span> <a href="#">Register Now</a>
+                <span data-i18n="login.tab.c">👤 Citizen</span> <a href="#" onclick="openRegisterModal(event)">Register Now</a>
               </p>
             </form>
           </div>
@@ -194,6 +194,152 @@
   </div>
 
   <div id="site-footer-placeholder"></div>
+  <!-- ── CITIZEN REGISTER MODAL ── -->
+  <div id="registerModal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.55);overflow-y:auto;">
+    <div style="max-width:500px;margin:40px auto;background:#fff;border-radius:14px;box-shadow:0 8px 40px rgba(0,0,0,0.22);padding:32px 28px;position:relative;">
+      <button onclick="closeRegisterModal()" style="position:absolute;top:14px;right:18px;background:none;border:none;font-size:1.5rem;cursor:pointer;color:#666;">✕</button>
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:2.2rem;">📝</div>
+        <h2 style="margin:8px 0 4px;font-size:1.35rem;">Register as Citizen</h2>
+        <p style="font-size:0.83rem;color:#718096;">Create your GrievAI account to file and track complaints.</p>
+      </div>
+      <div id="registerResult"></div>
+      <form id="registerForm" novalidate>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-weight:600;font-size:0.88rem;margin-bottom:5px;">Full Name <span style="color:red">*</span></label>
+          <input type="text" id="regName" class="form-control" placeholder="Enter your full name" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:0.92rem;">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-weight:600;font-size:0.88rem;margin-bottom:5px;">Mobile Number <span style="color:red">*</span></label>
+          <input type="tel" id="regMobile" class="form-control" placeholder="10-digit mobile number" maxlength="10" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:0.92rem;">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-weight:600;font-size:0.88rem;margin-bottom:5px;">Email Address</label>
+          <input type="email" id="regEmail" class="form-control" placeholder="your@email.com" style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:0.92rem;">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-weight:600;font-size:0.88rem;margin-bottom:5px;">Aadhaar Number <span style="color:red">*</span></label>
+          <input type="text" id="regAadhaar" class="form-control" placeholder="12-digit Aadhaar number" maxlength="12" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:0.92rem;">
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-weight:600;font-size:0.88rem;margin-bottom:5px;">State / UT <span style="color:red">*</span></label>
+          <select id="regState" class="form-control" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:0.92rem;">
+            <option value="">-- Select State --</option>
+            <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option>
+            <option>Bihar</option><option>Chhattisgarh</option><option>Delhi (NCT)</option>
+            <option>Goa</option><option>Gujarat</option><option>Haryana</option>
+            <option>Himachal Pradesh</option><option>Jammu &amp; Kashmir</option><option>Jharkhand</option>
+            <option>Karnataka</option><option>Kerala</option><option>Madhya Pradesh</option>
+            <option>Maharashtra</option><option>Manipur</option><option>Meghalaya</option>
+            <option>Odisha</option><option>Punjab</option><option>Rajasthan</option>
+            <option>Tamil Nadu</option><option>Telangana</option><option>Uttar Pradesh</option>
+            <option>Uttarakhand</option><option>West Bengal</option>
+          </select>
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-weight:600;font-size:0.88rem;margin-bottom:5px;">Create Password <span style="color:red">*</span></label>
+          <input type="password" id="regPassword" class="form-control" placeholder="Minimum 8 characters" minlength="8" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:0.92rem;">
+        </div>
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-weight:600;font-size:0.88rem;margin-bottom:5px;">Confirm Password <span style="color:red">*</span></label>
+          <input type="password" id="regConfirmPass" class="form-control" placeholder="Re-enter password" required style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:7px;font-size:0.92rem;">
+        </div>
+        <div style="margin-bottom:18px;">
+          <label style="font-size:0.83rem;display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="regConsent" required style="margin-top:3px;flex-shrink:0;">
+            <span>I agree to the <a href="#" style="color:var(--primary,#1a56db);">Terms &amp; Conditions</a> and consent to the use of my data as per the Government of India data policy.</span>
+          </label>
+        </div>
+        <button type="submit" id="regSubmitBtn" style="width:100%;padding:12px;background:var(--primary,#1a56db);color:#fff;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;letter-spacing:0.3px;">
+          ✅ Register Account
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  function openRegisterModal(e) {
+    if (e) e.preventDefault();
+    document.getElementById('registerModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+  }
+  function closeRegisterModal() {
+    document.getElementById('registerModal').style.display = 'none';
+    document.body.style.overflow = '';
+  }
+  // Close on backdrop click
+  document.getElementById('registerModal').addEventListener('click', function(e) {
+    if (e.target === this) closeRegisterModal();
+  });
+
+  document.getElementById('registerForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var name    = document.getElementById('regName').value.trim();
+    var mobile  = document.getElementById('regMobile').value.trim();
+    var aadhaar = document.getElementById('regAadhaar').value.trim();
+    var state   = document.getElementById('regState').value;
+    var pass    = document.getElementById('regPassword').value;
+    var confirm = document.getElementById('regConfirmPass').value;
+    var consent = document.getElementById('regConsent').checked;
+    var result  = document.getElementById('registerResult');
+
+    // Validation
+    if (!name || !mobile || !aadhaar || !state || !pass || !confirm) {
+      result.innerHTML = '<div style="background:#fff3cd;border:1px solid #f6c23e;border-radius:7px;padding:10px 14px;margin-bottom:14px;font-size:0.85rem;color:#856404;">⚠️ Please fill in all required fields.</div>';
+      return;
+    }
+    if (!/^\d{10}$/.test(mobile)) {
+      result.innerHTML = '<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:7px;padding:10px 14px;margin-bottom:14px;font-size:0.85rem;color:#721c24;">⚠️ Mobile number must be exactly 10 digits.</div>';
+      return;
+    }
+    if (!/^\d{12}$/.test(aadhaar)) {
+      result.innerHTML = '<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:7px;padding:10px 14px;margin-bottom:14px;font-size:0.85rem;color:#721c24;">⚠️ Aadhaar number must be exactly 12 digits.</div>';
+      return;
+    }
+    if (pass.length < 8) {
+      result.innerHTML = '<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:7px;padding:10px 14px;margin-bottom:14px;font-size:0.85rem;color:#721c24;">⚠️ Password must be at least 8 characters.</div>';
+      return;
+    }
+    if (pass !== confirm) {
+      result.innerHTML = '<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:7px;padding:10px 14px;margin-bottom:14px;font-size:0.85rem;color:#721c24;">⚠️ Passwords do not match.</div>';
+      return;
+    }
+    if (!consent) {
+      result.innerHTML = '<div style="background:#fff3cd;border:1px solid #f6c23e;border-radius:7px;padding:10px 14px;margin-bottom:14px;font-size:0.85rem;color:#856404;">⚠️ Please accept the Terms &amp; Conditions.</div>';
+      return;
+    }
+
+    // Save to localStorage (offline demo mode)
+    var btn = document.getElementById('regSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Registering…';
+
+    var existing = JSON.parse(localStorage.getItem('grievai_registered_users') || '[]');
+    var alreadyExists = existing.some(function(u) { return u.mobile === mobile; });
+    if (alreadyExists) {
+      result.innerHTML = '<div style="background:#f8d7da;border:1px solid #f5c6cb;border-radius:7px;padding:10px 14px;margin-bottom:14px;font-size:0.85rem;color:#721c24;">⚠️ This mobile number is already registered. Please login instead.</div>';
+      btn.disabled = false;
+      btn.textContent = '✅ Register Account';
+      return;
+    }
+
+    var newUser = { name: name, mobile: mobile, aadhaar: aadhaar, state: state, password: pass, role: 'citizen', registered_at: new Date().toISOString() };
+    existing.push(newUser);
+    localStorage.setItem('grievai_registered_users', JSON.stringify(existing));
+
+    // Auto-login after registration
+    var demoToken = 'demo_token_citizen_' + Date.now();
+    sessionStorage.setItem('grievai_role',  'citizen');
+    sessionStorage.setItem('grievai_user',  name);
+    sessionStorage.setItem('grievai_token', demoToken);
+    localStorage.setItem('grievai_token',   demoToken);
+
+    result.innerHTML = '<div style="background:#d4edda;border:1px solid #c3e6cb;border-radius:7px;padding:12px 14px;margin-bottom:14px;font-size:0.88rem;color:#155724;">✅ <strong>Registration successful!</strong> Redirecting to home page…</div>';
+    btn.textContent = '✅ Registered!';
+    setTimeout(function() { window.location.href = 'index.html'; }, 1200);
+  });
+  </script>
+
   <script>
   // FIX 5: One-click demo login
   function demoLogin(role, user, pass) {
@@ -225,8 +371,11 @@
 
     // Short delay then redirect
     setTimeout(function() {
-      sessionStorage.setItem('grievai_role', role);
-      sessionStorage.setItem('grievai_user', role === 'citizen' ? 'Ramesh Kumar' : role === 'officer' ? 'Officer Priya Sharma' : 'Administrator');
+      var demoToken = 'demo_token_' + role + '_' + Date.now();
+      sessionStorage.setItem('grievai_role',  role);
+      sessionStorage.setItem('grievai_user',  role === 'citizen' ? 'Ramesh Kumar' : role === 'officer' ? 'Officer Priya Sharma' : 'Administrator');
+      sessionStorage.setItem('grievai_token', demoToken);
+      localStorage.setItem('grievai_token',   demoToken);
       // Citizens go to home page; officers/admins go to dashboard
       if (role === 'citizen') {
         window.location.href = 'index.html';
@@ -241,6 +390,7 @@
   <script src="js/camera.js"></script>
   <script src="js/lang.js"></script>
   <script src="js/components.js"></script>
+  <script src="js/grievai_data.js"></script>
   <script src="js/main.js"></script>
   <script src="js/chatbot.js"></script>
   <script src="js/grievai_patch.js"></script>

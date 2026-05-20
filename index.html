@@ -113,15 +113,15 @@
             <div class="form-section-icon">📝</div>
             <div>
               <h2 data-i18n="form.lodge.h2">Lodge Your Complaint</h2>
-              <p data-i18n="form.lodge.sub">Login required. Only registered citizens can file complaints.</p>
+              <p data-i18n="form.lodge.sub">File your grievance below — no login required.</p>
             </div>
           </div>
           <!-- ── Login Gate: shown when NOT logged in as citizen ── -->
           <div id="complaintLoginGate" style="display:none;">
             <div style="background:#fff3cd;border:1.5px solid #ffc107;border-radius:10px;padding:28px 24px;text-align:center;margin-bottom:8px;">
               <div style="font-size:2.2rem;margin-bottom:10px;">🔐</div>
-              <h3 style="color:#003366;font-family:var(--font-serif);margin:0 0 8px;">Login Required to File a Complaint</h3>
-              <p style="color:#4a5568;font-size:0.88rem;margin:0 0 18px;">Only registered citizens can lodge complaints. Please login or register to continue.</p>
+              <h3 style="color:#003366;font-family:var(--font-serif);margin:0 0 8px;">File a Complaint</h3>
+              <p style="color:#4a5568;font-size:0.88rem;margin:0 0 18px;">Anyone can file a complaint — no login needed. Your complaint ID will be shown after submission.</p>
               <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
                 <a href="login.html" class="btn btn-primary">🔑 Login Now</a>
                 <a href="login.html#register" class="btn btn-outline-navy">📝 Register as Citizen</a>
@@ -140,7 +140,7 @@
           <div id="complaintFormWrap">
             <div class="form-note">
               <span>ℹ️</span>
-              <span>Your complaint will be linked to your account. Save the Complaint ID provided after submission to track your grievance.</span>
+              <span>Save the Complaint ID shown after submission to track your grievance — no login required.</span>
             </div>
             <div id="complaintResult"></div>
             <form id="complaintForm" novalidate>
@@ -498,6 +498,7 @@
   <script src="js/camera.js"></script>
   <script src="js/lang.js"></script>
   <script src="js/components.js"></script>
+  <script src="js/grievai_data.js"></script>
   <script src="js/main.js"></script>
   <script src="js/grievai_enhancements.js"></script>
   <script src="js/chatbot.js"></script>
