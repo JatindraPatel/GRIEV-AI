@@ -1,49 +1,30 @@
 /**
- * GrievAI — Auth Guard & Role Access Control
- * ============================================
+ * GrievAI — Auth Guard & Role Access Control (No-Backend Edition)
+ * ================================================================
  * Rules:
- *  - index.html  → PUBLIC (no redirect, no login required)
- *  - login.html  → PUBLIC (redirect to dashboard if already logged in)
- *  - track.html, status.html → PUBLIC (anyone can use)
- *  - dashboard.html → REQUIRES login; BLOCKS citizens (redirect to home)
- *  - about, faq, help, contact, departments, accuracy, security, sitemap
- *                → REQUIRES login; citizens CAN access
- *  - Citizens only see: home, track, status + info pages
- *  - Admin/Officer see: all pages including dashboard
+ *  - index.html         → PUBLIC — anyone can file complaint WITHOUT login
+ *  - login.html         → PUBLIC
+ *  - track.html         → PUBLIC
+ *  - status.html        → PUBLIC
+ *  - feedback.html      → PUBLIC
+ *  - about, faq, help, contact, departments, accuracy, security, sitemap → PUBLIC
+ *  - dashboard.html     → REQUIRES login as officer OR admin only
+ *  - Citizens redirected from dashboard to index.html
  */
-
 (function () {
   'use strict';
+  var PAGE = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
 
-  var PAGE = (function () {
-    var p = window.location.pathname.split('/').pop() || 'index.html';
-    return p.toLowerCase();
-  })();
-
-  // Pages that never require login
-  var PUBLIC_PAGES = ['index.html', '', 'track.html', 'status.html', 'login.html'];
-
-  // Pages citizens are explicitly ALLOWED after login
-  var CITIZEN_ALLOWED = [
-    'index.html', '', 'track.html', 'status.html', 'login.html',
-    'about.html', 'faq.html', 'help.html', 'contact.html',
-    'departments.html', 'accuracy.html', 'security.html', 'sitemap.html',
-    'feedback.html'
+  var PUBLIC_PAGES = [
+    'index.html','','track.html','status.html','login.html',
+    'about.html','faq.html','help.html','contact.html',
+    'departments.html','accuracy.html','security.html','sitemap.html','feedback.html'
   ];
-
-  // Pages that require officer or admin
   var ADMIN_OFFICER_ONLY = ['dashboard.html'];
 
   function getAuth() {
-    var role  = sessionStorage.getItem('grievai_role')  || '';
-    var user  = sessionStorage.getItem('grievai_user')  || '';
-    var token = sessionStorage.getItem('grievai_token') || '';
-    return {
-      role    : role,
-      user    : user,
-      token   : token,
-      loggedIn: !!(role && token)   // MUST have a real token
-    };
+    var role = sessionStorage.getItem('grievai_role') || '';
+    return { role: role, loggedIn: !!role };
   }
 
   function redirectTo(page, msg) {
@@ -51,61 +32,37 @@
     window.location.replace(page);
   }
 
+  function showBannerOnLoad() {
+    window.addEventListener('DOMContentLoaded', function () {
+      var msg = sessionStorage.getItem('grievai_redirect_msg');
+      if (!msg) return;
+      sessionStorage.removeItem('grievai_redirect_msg');
+      if (typeof showNotification === 'function') { showNotification(msg, 'warning'); return; }
+      var b = document.createElement('div');
+      b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#e17a00;color:#fff;padding:12px 20px;text-align:center;font-size:0.9rem;font-weight:600;';
+      b.textContent = '⚠️ ' + msg;
+      document.body.prepend(b);
+      setTimeout(function(){ b.remove(); }, 4000);
+    });
+  }
+
   var auth = getAuth();
 
-  // ── 1. login.html: if already logged in, send to right place ──────────
   if (PAGE === 'login.html') {
     if (auth.loggedIn) {
-      if (auth.role === 'admin' || auth.role === 'officer') {
-        redirectTo('dashboard.html');
-      } else {
-        redirectTo('index.html');
-      }
+      redirectTo(auth.role === 'admin' || auth.role === 'officer' ? 'dashboard.html' : 'index.html');
     }
-    return; // nothing else to check on login page
-  }
-
-  // ── 2. PUBLIC pages — always allowed ──────────────────────────────────
-  if (PUBLIC_PAGES.indexOf(PAGE) !== -1) {
     return;
   }
 
-  // ── 3. All other pages require login ──────────────────────────────────
-  if (!auth.loggedIn) {
-    redirectTo('login.html', 'Please login to access this page.');
-    return;
-  }
+  if (PUBLIC_PAGES.indexOf(PAGE) !== -1) { showBannerOnLoad(); return; }
 
-  // ── 4. dashboard.html → citizens are blocked ──────────────────────────
   if (ADMIN_OFFICER_ONLY.indexOf(PAGE) !== -1) {
-    if (auth.role !== 'admin' && auth.role !== 'officer') {
-      redirectTo('index.html', 'Dashboard access is restricted to Officers and Administrators.');
-      return;
-    }
-  }
-
-  // ── 5. Citizens: block pages not in allowed list ──────────────────────
-  if (auth.role === 'citizen' && CITIZEN_ALLOWED.indexOf(PAGE) === -1) {
-    redirectTo('index.html', 'You do not have permission to view this page.');
+    if (!auth.loggedIn) { redirectTo('login.html', 'Please login as Officer or Administrator to access the dashboard.'); return; }
+    if (auth.role !== 'admin' && auth.role !== 'officer') { redirectTo('index.html', 'Dashboard access is restricted to Officers and Administrators.'); return; }
+    showBannerOnLoad();
     return;
   }
 
-  // ── 6. Show redirect message if any ───────────────────────────────────
-  window.addEventListener('DOMContentLoaded', function () {
-    var msg = sessionStorage.getItem('grievai_redirect_msg');
-    if (msg) {
-      sessionStorage.removeItem('grievai_redirect_msg');
-      if (typeof showNotification === 'function') {
-        showNotification(msg, 'warning');
-      } else {
-        // Fallback: inject a banner at top of body
-        var banner = document.createElement('div');
-        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9999;background:#e17a00;color:#fff;padding:12px 20px;text-align:center;font-size:0.9rem;font-weight:600;';
-        banner.textContent = '⚠️ ' + msg;
-        document.body.prepend(banner);
-        setTimeout(function () { banner.remove(); }, 4000);
-      }
-    }
-  });
-
+  showBannerOnLoad();
 })();
